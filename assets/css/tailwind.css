@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #000000;
+  --color-background: #ffffff;
+  --color-accent: #fedb3f;
+
+  --color-yellow: #fedb3f;
+  --color-yellow-light: #fff3a1;
+  --color-yellow-dark: #e6c231;
+
+  --font-family-sans: "Jost", system-ui, sans-serif;
+  --font-family-title: "Jost", system-ui, sans-serif;
+}
