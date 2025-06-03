@@ -36,6 +36,7 @@
 // Protéger cette page avec le middleware d'authentification
 definePageMeta({
   middleware: "auth",
+  layout: "dashboard",
 });
 
 const { $supabase, $user } = useNuxtApp();

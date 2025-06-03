@@ -2,8 +2,11 @@
 export default defineNuxtRouteMiddleware((to) => {
   const { $user } = useNuxtApp();
 
-  // Si l'utilisateur n'est pas connecté, rediriger vers login
-  if (!$user.value) {
+  // Vérifier si l'utilisateur est connecté
+  if (!$user) {
     return navigateTo("/login");
   }
+
+  // Si l'utilisateur est connecté, continuer
+  return;
 });
