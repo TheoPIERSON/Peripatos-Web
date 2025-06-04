@@ -1,12 +1,7 @@
-// middleware/auth.ts
 export default defineNuxtRouteMiddleware((to) => {
-  const { $user } = useNuxtApp();
+  const user = useSupabaseUser();
 
-  // Vérifier si l'utilisateur est connecté
-  if (!$user) {
+  if (!user.value) {
     return navigateTo("/login");
   }
-
-  // Si l'utilisateur est connecté, continuer
-  return;
 });

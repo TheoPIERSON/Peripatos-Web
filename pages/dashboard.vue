@@ -32,22 +32,17 @@
   </div>
 </template>
 
-<script setup lang="ts">
-// Protéger cette page avec le middleware d'authentification
+<script setup>
 definePageMeta({
   middleware: "auth",
   layout: "dashboard",
 });
 
-const { $supabase, $user } = useNuxtApp();
-const user = $user;
+const { user, signOut } = useAuth();
+const router = useRouter();
 
-const logout = async () => {
-  try {
-    await $supabase.auth.signOut();
-    await navigateTo("/login");
-  } catch (error) {
-    console.error("Erreur lors de la déconnexion:", error);
-  }
+const handleLogout = async () => {
+  await signOut();
+  await router.push("/login");
 };
 </script>

@@ -4,10 +4,10 @@
       <div>
         <h2 class="text-2xl font-bold text-primary">Se connecter à votre compte</h2>
       </div>
-      <div v-if="errorMessage" class="rounded-md bg-red-50 p-4 mb-4">
+      <div v-if="error" class="rounded-md bg-red-50 p-4 mb-4">
         <div class="flex">
           <div class="ml-3">
-            <p class="text-sm text-red-700">{{ errorMessage }}</p>
+            <p class="text-sm text-red-700">{{ error }}</p>
           </div>
         </div>
       </div>
@@ -44,10 +44,10 @@
         <div>
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="loading"
             class="w-full flex justify-center py-3 px-4 border border-transparent text-base font-medium rounded-md text-primary bg-accent hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            <span v-if="isLoading" class="flex items-center">
+            <span v-if="loading" class="flex items-center">
               <svg
                 class="animate-spin -ml-1 mr-3 h-5 w-5 text-primary"
                 xmlns="http://www.w3.org/2000/svg"
@@ -67,55 +67,43 @@
           </button>
         </div>
       </form>
+
+      <div class="text-center">
+        <NuxtLink to="/register" class="text-sm text-accent hover:text-accent-dark font-medium">
+          Pas encore de compte ? S'inscrire
+        </NuxtLink>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-
-const { $supabase } = useNuxtApp();
-const supabase = $supabase;
+const { signIn } = useAuth();
+const router = useRouter();
 
 const email = ref("");
 const password = ref("");
-const errorMessage = ref("");
-const isLoading = ref(false);
+const loading = ref(false);
+const error = ref("");
 
 const handleLogin = async () => {
-  isLoading.value = true;
-  errorMessage.value = "";
+  loading.value = true;
+  error.value = "";
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value,
-    });
+    const { error: authError } = await signIn(email.value, password.value);
 
-    if (error) throw error;
-
-    // Vérifier si la connexion a réussi
-    if (data.session) {
-      // Stocker la session dans le localStorage
-      localStorage.setItem(
-        "supabase.auth.token",
-        JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_at: data.session.expires_at,
-        })
-      );
-
-      // Redirection vers le dashboard
-      await navigateTo("/dashboard", { replace: true });
+    if (authError) {
+      error.value = authError.message || "Une erreur est survenue lors de la connexion";
     } else {
-      throw new Error("Erreur lors de la connexion");
+      console.log("Connexion réussie");
+      await router.push("/dashboard");
     }
-  } catch (error: any) {
-    console.error("Erreur de connexion:", error);
-    errorMessage.value = error.message || "Une erreur est survenue lors de la connexion";
+  } catch (err: any) {
+    console.error("Erreur de connexion:", err);
+    error.value = err.message || "Une erreur est survenue lors de la connexion";
   } finally {
-    isLoading.value = false;
+    loading.value = false;
   }
 };
 </script>
