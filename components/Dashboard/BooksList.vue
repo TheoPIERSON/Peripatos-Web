@@ -14,7 +14,7 @@
       <p>Aucun livre trouvé.</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
       <div
         v-for="book in books"
         :key="book.id"
@@ -32,7 +32,7 @@
           <div class="absolute inset-0 flex flex-col justify-between p-4 text-white">
             <!-- Titre et auteur en haut -->
             <div class="text-center">
-              <h2 class="text-lg font-bold leading-tight mb-2 drop-shadow-lg">
+              <h2 class="text-2xl font-bold leading-tight mt-22 mb-6 drop-shadow-lg">
                 {{ book.title }}
               </h2>
               <p class="text-sm font-medium opacity-90 drop-shadow-md">
@@ -44,7 +44,7 @@
             <div v-if="book.rating" class="flex justify-center items-center">
               <div class="px-3 py-1">
                 <div class="flex items-center space-x-1">
-                  <span class="text-xs ml-1 font-medium">{{ book.rating }}</span>
+                  <span class="text-xl mb-10 font-medium">{{ book.rating }}</span>
                 </div>
               </div>
             </div>
@@ -55,6 +55,7 @@
         <div class="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div class="text-xs text-gray-500 space-y-1">
             <p v-if="book.year">Année: {{ book.year }}</p>
+            <p v-if="book.genre">Genre: {{ book.genre }}</p>
             <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
           </div>
         </div>
@@ -69,26 +70,40 @@ const { fetchBooks } = useBooks();
 // Utilisation d'useLazyAsyncData pour un chargement optimisé
 const { data: books, pending, error, refresh } = await useLazyAsyncData("books", fetchBooks);
 
-// Liste des images de couverture disponibles
-const coverImages = [
-  "/images/cover/blue_light.png",
-  "/images/cover/green_nature.png",
-  "/images/cover/red_classic.png",
-  "/images/cover/purple_mystery.png",
-  "/images/cover/orange_adventure.png",
-  "/images/cover/pink_romance.png",
-];
+// Correspondance entre les genres et les images de couverture
+const genreToImageMap = {
+  philosophie: "/images/cover/blue_sky.png",
+  "policier/thriller": "/images/cover/green_nature.png",
+  classique: "/images/cover/red_classic.png",
+  aventure: "/images/cover/orange_adventure.png",
+  romance: "/images/cover/pink_romance.png",
+  "science-fiction": "/images/cover/yellow.png",
+  histoire: "/images/cover/red_classic.png",
+  biographie: "/images/cover/green_nature.png",
+  essai: "/images/cover/blue_light.png",
+  roman: "/images/cover/red_classic.png",
+  thriller: "/images/cover/purple_mystery.png",
+  fantaisie: "/images/cover/orange_adventure.png",
+  science: "/images/cover/orange_adventure.png",
+
+  cuisine: "/images/cover/orange_adventure.png",
+  "développement personnel": "/images/cover/green_.png",
+};
+
+// Image par défaut si aucun genre ne correspond
+const defaultCoverImage = "/images/cover/sand.png";
 
 // Fonction pour obtenir l'image de couverture d'un livre
 const getBookCoverImage = (book) => {
-  // Si le livre a une image spécifique, l'utiliser
-  if (book.cover_image) {
-    return `/images/cover/${book.cover_image}`;
+  if (!book.genre) {
+    return defaultCoverImage;
   }
 
-  // Sinon, choisir une image basée sur l'ID du livre pour la cohérence
-  const imageIndex = book.id % coverImages.length;
-  return `/images/cover/blue_light.png`;
+  // Normalisation du genre (minuscules, espaces supprimés)
+  const normalizedGenre = book.genre.toLowerCase().trim();
+
+  // Recherche de l'image correspondante
+  return genreToImageMap[normalizedGenre] || defaultCoverImage;
 };
 
 // Fonction utilitaire pour formater les dates
