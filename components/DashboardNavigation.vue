@@ -13,7 +13,7 @@
       </div>
     </div>
     <NuxtLink
-      to="/dashboard"
+      to="/"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:add-circle-16" style="color: black" size="32" />

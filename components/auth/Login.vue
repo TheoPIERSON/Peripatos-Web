@@ -97,7 +97,7 @@ const handleLogin = async () => {
       error.value = authError.message || "Une erreur est survenue lors de la connexion";
     } else {
       console.log("Connexion réussie");
-      await router.push("/library");
+      await router.push("/dashboard/library");
     }
   } catch (err: any) {
     console.error("Erreur de connexion:", err);
