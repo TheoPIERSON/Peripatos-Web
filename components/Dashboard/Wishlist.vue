@@ -53,10 +53,19 @@
 
         <!-- Informations supplémentaires au survol (optionnel) -->
         <div class="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div class="text-xs text-gray-500 space-y-1">
-            <p v-if="book.year">Année: {{ book.year }}</p>
-            <p v-if="book.genre">Genre: {{ book.genre }}</p>
-            <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
+          <div class="flex flex-col items-center space-y-1">
+            <button 
+              @click="toggleFavorite(book)"
+              class="p-2 hover:text-red-500 transition-colors"
+              :class="{ 'text-red-500': book.favorite, 'text-gray-400': !book.favorite }"
+            >
+              <i class="fas fa-heart"></i>
+            </button>
+            <div class="text-xs text-gray-500">
+              <p v-if="book.year">Année: {{ book.year }}</p>
+              <p v-if="book.genre">Genre: {{ book.genre }}</p>
+              <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -107,6 +116,22 @@ const getBookCoverImage = (book) => {
 const formatDate = (dateString) => {
   const date = new Date(dateString);
   return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
+};
+
+// Fonction pour basculer le statut favori d'un livre
+const toggleFavorite = async (book) => {
+  try {
+    const updatedBook = await useFavoriteBook(book.id, !book.favorite);
+    if (updatedBook.value) {
+      // Mettre à jour le livre dans la liste
+      const index = wishlistBooks.value.findIndex(b => b.id === book.id);
+      if (index !== -1) {
+        wishlistBooks.value[index] = updatedBook.value;
+      }
+    }
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du favori:', error);
+  }
 };
 
 // Meta données pour SEO

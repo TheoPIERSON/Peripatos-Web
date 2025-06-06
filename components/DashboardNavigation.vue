@@ -36,7 +36,7 @@
       <span class="text-xs">Liste d'envie</span>
     </NuxtLink>
     <NuxtLink
-      to="/dashboard/profile"
+      to="/dashboard/favorites"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:heart-28" style="color: black" size="32" />
@@ -82,12 +82,15 @@ const closeModal = () => {
 };
 
 const handleAddBook = async (bookData: {
+  id: string;
   title: string;
   author: string | null;
   genre: string;
   started: string;
   rating: string | null;
   critic: string | null;
+  created_at: string;
+  favorite: boolean;
 }) => {
   if (!bookData.title) {
     console.error("Le titre est requis");

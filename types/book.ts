@@ -6,6 +6,6 @@ export interface Book {
   started: string;
   rating: string | null;
   critic: string | null;
-  year: string | null;
   created_at: string;
+  favorite: boolean;
 }
