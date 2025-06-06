@@ -1,5 +1,5 @@
 <template>
-  <div class="pt-0 pb-16 md:pb-0 md:pl-34"><DashboardBooksList /></div>
+  <div class="pt-0 pb-16 md:pb-0 md:pl-34"><DashboardWishlist /></div>
 </template>
 
 <script lang="ts" setup>

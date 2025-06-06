@@ -21,7 +21,7 @@
     </button>
 
     <NuxtLink
-      to="/dashboard/profile"
+      to="/dashboard/library"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:library-24" style="color: black" size="32" />
@@ -29,7 +29,7 @@
     </NuxtLink>
 
     <NuxtLink
-      to="/dashboard/profile"
+      to="/dashboard/wishlist"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:book-16" style="color: black" size="32" />
