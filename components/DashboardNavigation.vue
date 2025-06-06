@@ -2,9 +2,11 @@
   <nav
     class="fixed z-50 bg-white shadow-lg w-full bottom-0 left-0 h-16 flex justify-around items-center md:top-0 md:left-0 md:bottom-0 md:w-44 md:h-full md:flex-col md:justify-start md:py-4"
   >
-    <div class="hidden sm:flex flex-col items-center justify-between py-3 mb-4 md:justify-center border-b border-gray-200">
+    <div
+      class="hidden sm:flex flex-col items-center justify-between py-3 mb-4 md:justify-center border-b border-gray-200"
+    >
       <div class="text-center grid place-items-center">
-        <span class="text-2xl font-bold text-primary">Peripatos</span>
+        <NuxtLink to="/index" class="text-2xl font-bold text-primary">Peripatos</NuxtLink>
         <img
           src="/images/aristote.png"
           alt="Avatar"
