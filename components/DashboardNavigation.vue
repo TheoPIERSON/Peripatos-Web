@@ -2,7 +2,7 @@
   <nav
     class="fixed z-50 bg-white shadow-lg w-full bottom-0 left-0 h-16 flex justify-around items-center md:top-0 md:left-0 md:bottom-0 md:w-44 md:h-full md:flex-col md:justify-start md:py-4"
   >
-    <div class="flex flex-col items-center justify-between py-3 mb-4 md:justify-center border-b border-gray-200">
+    <div class="hidden sm:flex flex-col items-center justify-between py-3 mb-4 md:justify-center border-b border-gray-200">
       <div class="text-center grid place-items-center">
         <span class="text-2xl font-bold text-primary">Peripatos</span>
         <img
@@ -14,41 +14,40 @@
     </div>
     <button
       @click="openModal"
-      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
+      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:add-circle-16" style="color: black" size="32" />
-      <span class="text-xs">Ajouter un livre</span>
+      <span class="text-xs sm:hidden">Ajouter un livre</span>
     </button>
 
     <NuxtLink
       to="/dashboard/library"
-      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
+      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:library-24" style="color: black" size="32" />
-      <span class="text-xs">Bibliothèque</span>
+      <span class="text-xs sm:hidden">Bibliothèque</span>
     </NuxtLink>
 
     <NuxtLink
       to="/dashboard/wishlist"
-      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
+      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:book-16" style="color: black" size="32" />
-      <span class="text-xs">Liste d'envie</span>
+      <span class="text-xs sm:hidden">Liste d'envie</span>
     </NuxtLink>
     <NuxtLink
       to="/dashboard/favorites"
-      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
+      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
-      <Icon name="fluent-color:heart-28" style="color: black" size="32" />
-      <span class="text-xs">Favoris</span>
+      <Icon name="fluent-color:heart-24" style="color: black" size="32" />
+      <span class="text-xs sm:hidden">Favoris</span>
     </NuxtLink>
-
     <NuxtLink
       to="/dashboard/settings"
-      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mt-auto pt-4 border-t border-gray-200"
+      class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
-      <Icon name="fluent-color:settings-32" style="color: black" size="32" />
-      <span class="text-xs">Paramètres</span>
+      <Icon name="fluent-color:settings-24" style="color: black" size="32" />
+      <span class="text-xs sm:hidden">Paramètres</span>
     </NuxtLink>
   </nav>
 
