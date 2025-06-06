@@ -1,10 +1,18 @@
 <template>
-  <div v-if="isOpen" class="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+  <div
+    v-if="isOpen"
+    class="fixed inset-0 flex items-center justify-end z-50 transition-opacity duration-300"
+    :class="{ 'bg-opacity-50': isVisible, 'bg-opacity-0': !isVisible }"
+    @click.self="closeModal"
+  >
+    <div
+      class="bg-white rounded-l-lg shadow-xl w-full max-w-md p-6 transform transition-transform duration-300 ease-out"
+      :class="{ 'translate-x-0': isVisible, 'translate-x-full': !isVisible }"
+    >
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Ajouter un livre</h2>
         <button @click="closeModal" class="text-gray-500 hover:text-gray-700">
-          <Icon name="fluent-color:dismiss-24" size="24" />
+          <NuxtIcon name="fluent-color:dismiss-24" size="24" />
         </button>
       </div>
 
@@ -104,8 +112,8 @@
   </div>
 </template>
 
-<script setup>
-import { ref } from "vue";
+<script setup lang="ts">
+import { ref, watch } from "vue";
 
 const emit = defineEmits(["close", "submit"]);
 
@@ -114,17 +122,32 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  isVisible: {
+    type: Boolean,
+    required: true,
+  },
 });
 
 const formData = ref({
   title: "",
   author: null,
-
   genre: "autre",
   started: "liste d'envie",
   rating: null,
   critic: null,
 });
+
+// Watch pour gérer le scroll du body
+watch(
+  () => props.isOpen,
+  (newValue) => {
+    if (newValue) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+  }
+);
 
 const closeModal = () => {
   emit("close");
@@ -135,7 +158,6 @@ const handleSubmit = () => {
   formData.value = {
     title: "",
     author: null,
-
     genre: "autre",
     started: "liste d'envie",
     rating: null,
@@ -143,3 +165,7 @@ const handleSubmit = () => {
   };
 };
 </script>
+
+<style scoped>
+/* Plus besoin de styles complexes, tout est géré par les classes Tailwind */
+</style>

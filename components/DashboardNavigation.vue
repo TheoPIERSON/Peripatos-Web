@@ -33,7 +33,6 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:book-16" style="color: black" size="32" />
-
       <span class="text-xs">Liste d'envie</span>
     </NuxtLink>
     <NuxtLink
@@ -41,7 +40,6 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:heart-28" style="color: black" size="32" />
-
       <span class="text-xs">Favoris</span>
     </NuxtLink>
 
@@ -54,23 +52,33 @@
     </NuxtLink>
   </nav>
 
-  <AddBookModal :is-open="isModalOpen" @close="closeModal" @submit="handleAddBook" />
+  <AddBookModal :is-open="isModalOpen" :is-visible="isModalVisible" @close="closeModal" @submit="handleAddBook" />
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import AddBookModal from "./AddBookModal.vue";
 import { useBooks } from "~/composables/useBooks";
 
 const { addBook } = useBooks();
 const isModalOpen = ref(false);
+const isModalVisible = ref(false);
 
-const openModal = () => {
+const openModal = async () => {
   isModalOpen.value = true;
+  await nextTick();
+  // Petit délai pour permettre au DOM de se mettre à jour
+  setTimeout(() => {
+    isModalVisible.value = true;
+  }, 10);
 };
 
 const closeModal = () => {
-  isModalOpen.value = false;
+  isModalVisible.value = false;
+  // Attendre la fin de l'animation avant de détruire le composant
+  setTimeout(() => {
+    isModalOpen.value = false;
+  }, 300);
 };
 
 const handleAddBook = async (bookData: {
@@ -90,6 +98,8 @@ const handleAddBook = async (bookData: {
     await addBook(bookData);
     console.log("Livre ajouté avec succès");
     closeModal();
+    // Émettre un événement global pour recharger la liste des livres
+    window.dispatchEvent(new CustomEvent("bookAdded"));
   } catch (error) {
     console.error("Erreur lors de l'ajout du livre:", error);
   }
