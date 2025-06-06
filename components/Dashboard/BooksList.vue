@@ -21,7 +21,7 @@
         class="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300"
       >
         <!-- Conteneur de la couverture -->
-        <div class="relative w-full h-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+        <div class="relative w-auto h-auto rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
           <!-- Image de fond -->
           <img :src="getBookCoverImage(book)" :alt="`Couverture de ${book.title}`" class="w-full h-full object-cover" />
 

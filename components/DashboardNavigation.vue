@@ -12,13 +12,13 @@
         />
       </div>
     </div>
-    <NuxtLink
-      to="/"
+    <button
+      @click="openModal"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-0 md:mb-6 mt-6"
     >
       <Icon name="fluent-color:add-circle-16" style="color: black" size="32" />
       <span class="text-xs">Ajouter un livre</span>
-    </NuxtLink>
+    </button>
 
     <NuxtLink
       to="/dashboard/profile"
@@ -53,4 +53,45 @@
       <span class="text-xs">Paramètres</span>
     </NuxtLink>
   </nav>
+
+  <AddBookModal :is-open="isModalOpen" @close="closeModal" @submit="handleAddBook" />
 </template>
+
+<script setup lang="ts">
+import { ref } from "vue";
+import AddBookModal from "./AddBookModal.vue";
+import { useBooks } from "~/composables/useBooks";
+
+const { addBook } = useBooks();
+const isModalOpen = ref(false);
+
+const openModal = () => {
+  isModalOpen.value = true;
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+};
+
+const handleAddBook = async (bookData: {
+  title: string;
+  author: string | null;
+  genre: string;
+  started: string;
+  rating: string | null;
+  critic: string | null;
+}) => {
+  if (!bookData.title) {
+    console.error("Le titre est requis");
+    return;
+  }
+
+  try {
+    await addBook(bookData);
+    console.log("Livre ajouté avec succès");
+    closeModal();
+  } catch (error) {
+    console.error("Erreur lors de l'ajout du livre:", error);
+  }
+};
+</script>
