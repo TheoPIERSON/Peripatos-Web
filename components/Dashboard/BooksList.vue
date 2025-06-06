@@ -68,7 +68,8 @@
 const { fetchBooks } = useBooks();
 
 // Utilisation d'useLazyAsyncData pour un chargement optimisé
-const { data: books, pending, error, refresh } = await useLazyAsyncData("books", fetchBooks);
+const { data: allBooks, pending, error, refresh } = await useLazyAsyncData("books", fetchBooks);
+const books = computed(() => allBooks.value?.filter(book => book.started !== 'Liste d\'envie'));
 
 // Correspondance entre les genres et les images de couverture
 const genreToImageMap = {
@@ -82,10 +83,8 @@ const genreToImageMap = {
   biographie: "/images/cover/green_nature.png",
   essai: "/images/cover/blue_light.png",
   roman: "/images/cover/red_classic.png",
-  thriller: "/images/cover/purple_mystery.png",
   fantaisie: "/images/cover/orange_adventure.png",
   science: "/images/cover/orange_adventure.png",
-
   cuisine: "/images/cover/orange_adventure.png",
   "développement personnel": "/images/cover/green_.png",
 };

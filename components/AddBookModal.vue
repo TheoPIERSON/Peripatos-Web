@@ -49,9 +49,20 @@
             >
               <option value="">Sélectionnez une catégorie</option>
               <option value="philosophie">Philosophie</option>
-              <option value="litterature">Littérature</option>
+              <option value="classique">Classique</option>
               <option value="histoire">Histoire</option>
               <option value="developpement personnel">Développement personnel</option>
+              <option value="policier/thriller">Policier/Thriller</option>
+              <option value="aventure">Aventure</option>
+              <option value="developpement personnel">Développement personnel</option>
+              <option value="romance">Romance</option>
+              <option value="science-fiction">Science-fiction</option>
+              <option value="biographie">Biographie</option>
+              <option value="essai">Essai</option>
+              <option value="roman">Roman</option>
+              <option value="fantaisie">Fantaisie</option>
+              <option value="science">Science</option>
+              <option value="cuisine">Cuisine</option>
               <option value="autre">Autre</option>
             </select>
           </div>
