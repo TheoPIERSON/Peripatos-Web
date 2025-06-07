@@ -14,20 +14,29 @@
       <p>Aucun livre favori trouvé.</p>
     </div>
 
-    <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
+    <div v-else class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-10">
       <div
         v-for="book in favoriteBooks"
         :key="book.id"
-        class="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300 sm:max-w-sm"
+        class="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300 w-full max-w-sm mx-auto"
       >
-        <div class="relative w-auto h-auto rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+        <!-- Conteneur de la couverture -->
+        <div
+          class="relative w-full aspect-[3/4] rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <!-- Image de fond -->
           <img :src="getBookCoverImage(book)" :alt="`Couverture de ${book.title}`" class="w-full h-full object-cover" />
+
+          <!-- Overlay gradient pour améliorer la lisibilité du texte -->
           <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/60"></div>
-          <div class="absolute inset-0 flex flex-col justify-between p-4 text-white">
+
+          <!-- Contenu texte sur l'image -->
+          <div class="absolute inset-0 flex flex-col justify-between p-2 sm:p-4 text-white">
+            <!-- Titre et auteur en haut -->
             <div class="text-center relative">
               <button
                 @click="toggleFavorite(book)"
-                class="absolute -top-4 -right-4 p-2 hover:text-red-500 transition-colors"
+                class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 p-1 sm:p-2 hover:text-red-500 transition-colors"
                 :class="{ 'text-red-500': book.favorite, 'text-gray-400': !book.favorite }"
               >
                 <Icon
@@ -36,23 +45,29 @@
                   size="24"
                 />
               </button>
-              <h2 class="text-2xl font-bold leading-tight mt-22 mb-6 drop-shadow-lg">
+              <h2
+                class="text-sm sm:text-lg lg:text-2xl font-bold leading-tight mt-6 sm:mt-22 mb-2 sm:mb-6 drop-shadow-lg line-clamp-3"
+              >
                 {{ book.title }}
               </h2>
-              <p class="text-sm font-medium opacity-90 drop-shadow-md">
+              <p class="text-xs sm:text-sm font-medium opacity-90 drop-shadow-md line-clamp-2">
                 {{ book.author }}
               </p>
             </div>
+
+            <!-- Rating en bas (si disponible) -->
             <div v-if="book.rating" class="flex justify-center items-center">
-              <div class="px-3 py-1">
+              <div class="px-1 sm:px-3 py-1">
                 <div class="flex items-center space-x-1">
-                  <span class="text-xl mb-10 font-medium">{{ book.rating }}</span>
+                  <span class="text-sm sm:text-xl mb-2 sm:mb-10 font-medium">{{ book.rating }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+
+        <!-- Informations supplémentaires au survol (masquées sur mobile pour économiser l'espace) -->
+        <div class="hidden sm:block mt-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <div class="flex flex-col items-center space-y-1">
             <div class="text-xs text-gray-500">
               <p v-if="book.genre">Genre: {{ book.genre }}</p>
@@ -67,15 +82,18 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useBooks } from "~/composables/useBooks";
+import { useBooks } from "~/composables/useBooks"; // ✨ 1. Importer notre composable
 import type { Book } from "~/types/book";
 
+// ✨ 2. Initialiser le composable une seule fois et déstructurer les méthodes nécessaires
 const { fetchBooks, updateBookFavorite } = useBooks();
 
+// Les refs pour gérer l'état de l'interface
 const favoriteBooks = ref<Book[]>([]);
 const pending = ref(true);
 const error = ref<Error | null>(null);
 
+// Chargement des livres favoris au montage du composant
 onMounted(async () => {
   try {
     const books = await fetchBooks();
@@ -88,6 +106,7 @@ onMounted(async () => {
   }
 });
 
+// Correspondance entre les genres et les images de couverture (INCHANGÉ)
 const genreToImageMap = {
   philosophie: "/images/cover/blue_sky.png",
   "policier/thriller": "/images/cover/green_nature.png",
@@ -107,6 +126,7 @@ const genreToImageMap = {
 const defaultCoverImage = "/images/cover/sand.png";
 type Genre = keyof typeof genreToImageMap;
 
+// Fonction pour obtenir l'image de couverture d'un livre (INCHANGÉ)
 const getBookCoverImage = (book: Book) => {
   if (!book.genre) {
     return defaultCoverImage;
@@ -115,23 +135,52 @@ const getBookCoverImage = (book: Book) => {
   return genreToImageMap[normalizedGenre] || defaultCoverImage;
 };
 
+// Fonction utilitaire pour formater les dates (INCHANGÉ)
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
 };
 
+// Fonction pour basculer le statut favori
 const toggleFavorite = async (book: Book) => {
   try {
+    // On met à jour l'état local pour une réactivité immédiate
     book.favorite = !book.favorite;
+
+    // On appelle la BDD en arrière-plan
     await updateBookFavorite(book.id, book.favorite);
+
+    // Si le livre n'est plus favori, on le retire de la liste
     if (!book.favorite) {
       favoriteBooks.value = favoriteBooks.value.filter((b) => b.id !== book.id);
     }
-  } catch (e) {
-    console.error("Erreur lors de la mise à jour du favori:", e);
-    book.favorite = !book.favorite; // Annuler le changement local
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du favori:", err);
+    // En cas d'erreur, on annule le changement dans l'interface
+    book.favorite = !book.favorite;
   }
 };
+
+// Meta données pour SEO
+useHead({
+  title: "Mes Livres Favoris - Bibliothèque",
+  meta: [{ name: "description", content: "Consultez mes livres favoris" }],
+});
 </script>
 
-<style></style>
+<style scoped>
+/* Utilitaire pour limiter le nombre de lignes de texte */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+</style>
