@@ -16,6 +16,11 @@ export default defineNuxtConfig({
   // Configuration SSR pour éviter les problèmes d'hydratation
   ssr: true,
 
+  // Configuration Supabase consolidée ici
+  supabase: {
+    redirect: false, // Désactive toutes les redirections automatiques
+  },
+
   googleFonts: {
     families: {
       Jost: [400, 500, 600, 700],

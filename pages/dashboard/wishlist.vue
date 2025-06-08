@@ -7,14 +7,6 @@ definePageMeta({
   middleware: "auth",
   layout: "dashboard",
 });
-
-const { user, signOut } = useAuth();
-const router = useRouter();
-
-const handleLogout = async () => {
-  await signOut();
-  await router.push("/login");
-};
 </script>
 
 <style></style>

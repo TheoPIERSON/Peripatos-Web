@@ -6,7 +6,7 @@
       class="hidden sm:flex flex-col items-center justify-between py-3 mb-4 md:justify-center border-b border-gray-200"
     >
       <div class="text-center grid place-items-center">
-        <NuxtLink to="/index" class="text-2xl font-bold text-primary">Peripatos</NuxtLink>
+        <NuxtLink to="/" class="text-2xl font-bold text-primary">Peripatos</NuxtLink>
         <img
           src="/images/aristote.png"
           alt="Avatar"
@@ -19,7 +19,7 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:add-circle-16" style="color: black" size="32" />
-      <span class="text-xs sm:hidden">Ajouter un livre</span>
+      <span class="text-xs">Ajouter un livre</span>
     </button>
 
     <NuxtLink
@@ -27,7 +27,7 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:library-24" style="color: black" size="32" />
-      <span class="text-xs sm:hidden">Bibliothèque</span>
+      <span class="text-xs">Bibliothèque</span>
     </NuxtLink>
 
     <NuxtLink
@@ -35,21 +35,21 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:book-16" style="color: black" size="32" />
-      <span class="text-xs sm:hidden">Liste d'envie</span>
+      <span class="text-xs">Liste d'envie</span>
     </NuxtLink>
     <NuxtLink
       to="/dashboard/favorites"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:heart-24" style="color: black" size="32" />
-      <span class="text-xs sm:hidden">Favoris</span>
+      <span class="text-xs">Favoris</span>
     </NuxtLink>
     <NuxtLink
       to="/dashboard/settings"
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:settings-24" style="color: black" size="32" />
-      <span class="text-xs sm:hidden">Paramètres</span>
+      <span class="text-xs">Paramètres</span>
     </NuxtLink>
   </nav>
 

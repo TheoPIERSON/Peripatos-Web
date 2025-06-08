@@ -4,7 +4,7 @@
       <div class="flex justify-between items-center h-16">
         <!-- Logo -->
         <div class="flex items-center justify-center">
-          <NuxtLink to="/index" class="text-2xl text-primary px-2 rounded font-title">Peripatos</NuxtLink>
+          <NuxtLink to="/" class="text-2xl text-primary px-2 rounded font-title">Peripatos</NuxtLink>
         </div>
 
         <!-- Navigation -->
