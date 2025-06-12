@@ -202,7 +202,7 @@ const bookData = ref({
 // Données de suivi utilisateur (table user_books)
 const userBookData = ref({
   favorite: false,
-  note: null as number | null,
+  note: 0 as number,
   review: "",
 });
 
@@ -227,7 +227,7 @@ const resetForm = () => {
   };
   userBookData.value = {
     favorite: false,
-    note: null,
+    note: 0,
     review: "",
   };
   error.value = "";

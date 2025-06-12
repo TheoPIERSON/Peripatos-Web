@@ -203,6 +203,41 @@ export const useUserBooks = () => {
       throw error;
     }
   };
+  // Récupérer les livres de la liste d'envie d'un utilisateur (note = 0)
+  const fetchWishlistBooks = async (userId: string) => {
+    if (!userId) {
+      throw new Error("ID utilisateur requis");
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("user_books")
+        .select(
+          `
+          *,
+          books (
+            id,
+            title,
+            author,
+            genre,
+            created_at
+          )
+        `
+        )
+        .eq("user_id", userId)
+        .eq("note", 0); // <-- La condition clé pour la liste d'envie
+
+      if (error) {
+        console.error("Erreur Supabase lors de la récupération de la wishlist:", error);
+        throw new Error(`Impossible de récupérer la liste d'envie: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Erreur lors de la récupération de la wishlist:", error);
+      throw error;
+    }
+  };
 
   return {
     // Types exportés
@@ -219,5 +254,6 @@ export const useUserBooks = () => {
     deleteUserBook,
     toggleFavorite,
     fetchFavoriteBooks,
+    fetchWishlistBooks,
   } as const;
 };

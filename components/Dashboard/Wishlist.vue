@@ -66,9 +66,8 @@
               <i class="fas fa-heart"></i>
             </button>
             <div class="text-xs text-gray-500">
-              <p v-if="book.year">Année: {{ book.year }}</p>
               <p v-if="book.genre">Genre: {{ book.genre }}</p>
-              <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
+              <p>Ajouté le: {{ formatDate(book.added_at) }}</p>
             </div>
           </div>
         </div>
@@ -77,14 +76,91 @@
   </div>
 </template>
 
-<script setup>
-const { fetchBooks } = useBooks();
+<script setup lang="ts">
+import { ref, onMounted } from "vue";
+// ✨ 1. On importe les bons composables
+import { useUserBooks } from "~/composables/useUserBooks";
+import { useSupabaseUser } from "#imports";
 
-// Utilisation d'useLazyAsyncData pour un chargement optimisé
-const { data: allBooks, pending, error, refresh } = await useLazyAsyncData("books", fetchBooks);
-const wishlistBooks = computed(() => allBooks.value?.filter((book) => book.started === "Liste d'envie"));
+// Le type pour nos livres, cohérent avec les autres pages
+type DisplayBook = {
+  id: string; // ID du livre
+  userBookId: string;
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+  favorite: boolean | null;
+  rating: number | null;
+  added_at: string | null;
+};
 
-// Correspondance entre les genres et les images de couverture
+// ✨ 2. On récupère l'utilisateur et on initialise le composable
+const user = useSupabaseUser();
+// On récupère notre nouvelle fonction fetchWishlistBooks et celle pour les favoris
+const { fetchWishlistBooks, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
+
+// Les refs pour l'état de l'interface
+const wishlistBooks = ref<DisplayBook[]>([]);
+const pending = ref(true);
+const error = ref<Error | null>(null);
+
+// ✨ 3. Au montage, on charge UNIQUEMENT les livres de la liste d'envie
+onMounted(async () => {
+  if (!user.value) {
+    pending.value = false;
+    return;
+  }
+
+  try {
+    // Appel direct à la fonction optimisée
+    const wishlistFromDb = await fetchWishlistBooks(user.value.id);
+
+    // On transforme les données pour le template
+    wishlistBooks.value = wishlistFromDb
+      .map((userBook) => {
+        if (!userBook.books) return null;
+        return {
+          id: userBook.books.id,
+          userBookId: userBook.id,
+          title: userBook.books.title,
+          author: userBook.books.author,
+          genre: userBook.books.genre,
+          favorite: userBook.favorite,
+          rating: userBook.note,
+          added_at: userBook.added_at,
+        };
+      })
+      .filter((book): book is DisplayBook => book !== null);
+  } catch (e) {
+    console.error("Erreur attrapée dans le composant:", e);
+    error.value = e as Error;
+  } finally {
+    pending.value = false;
+  }
+});
+
+// ✨ 4. Fonction pour gérer le favori (identique à celle de "Mes Livres")
+const toggleFavorite = async (book: DisplayBook) => {
+  if (!user.value) {
+    alert("Veuillez vous connecter pour gérer vos favoris.");
+    return;
+  }
+
+  // Mise à jour optimiste
+  const originalFavoriteStatus = book.favorite;
+  book.favorite = !book.favorite;
+
+  try {
+    await toggleFavoriteInDb(user.value.id, book.id);
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du favori:", err);
+    book.favorite = originalFavoriteStatus; // On annule en cas d'erreur
+    alert("Une erreur est survenue.");
+  }
+};
+
+// ----- Fonctions utilitaires (INCHANGÉES) -----
+
 const genreToImageMap = {
   philosophie: "/images/cover/blue_sky.png",
   "policier/thriller": "/images/cover/green_nature.png",
@@ -101,41 +177,19 @@ const genreToImageMap = {
   cuisine: "/images/cover/orange_adventure.png",
   "développement personnel": "/images/cover/green_.png",
 };
-
-// Image par défaut si aucun genre ne correspond
 const defaultCoverImage = "/images/cover/sand.png";
+type Genre = keyof typeof genreToImageMap;
 
-// Fonction pour obtenir l'image de couverture d'un livre
-const getBookCoverImage = (book) => {
-  if (!book.genre) {
-    return defaultCoverImage;
-  }
-
-  // Normalisation du genre (minuscules, espaces supprimés)
-  const normalizedGenre = book.genre.toLowerCase().trim();
+const getBookCoverImage = (book: DisplayBook) => {
+  if (!book.genre) return defaultCoverImage;
+  const normalizedGenre = book.genre.toLowerCase().trim() as Genre;
   return genreToImageMap[normalizedGenre] || defaultCoverImage;
 };
 
-// Fonction utilitaire pour formater les dates
-const formatDate = (dateString) => {
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return "Date inconnue";
   const date = new Date(dateString);
   return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
-};
-
-// Fonction pour basculer le statut favori d'un livre
-const toggleFavorite = async (book) => {
-  try {
-    const updatedBook = await useFavoriteBook(book.id, !book.favorite);
-    if (updatedBook.value) {
-      // Mettre à jour le livre dans la liste
-      const index = wishlistBooks.value.findIndex((b) => b.id === book.id);
-      if (index !== -1) {
-        wishlistBooks.value[index] = updatedBook.value;
-      }
-    }
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour du favori:", error);
-  }
 };
 
 // Meta données pour SEO

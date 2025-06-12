@@ -59,7 +59,7 @@
             <div v-if="book.rating" class="flex justify-center items-center">
               <div class="px-1 sm:px-3 py-1">
                 <div class="flex items-center space-x-1">
-                  <span class="text-sm sm:text-xl mb-2 sm:mb-10 font-medium">{{ book.rating }}</span>
+                  <span class="text-sm sm:text-xl mb-2 sm:mb-10 font-medium">{{ getRatingStars(book.rating) }}</span>
                 </div>
               </div>
             </div>
@@ -82,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
+import { getRatingStars } from "~/utils/ratingUtils";
 // ✨ 1. On importe le composable pour les livres de l'utilisateur et celui pour récupérer l'utilisateur Supabase
 import { useUserBooks } from "~/composables/useUserBooks";
 import { useSupabaseUser } from "#imports";
