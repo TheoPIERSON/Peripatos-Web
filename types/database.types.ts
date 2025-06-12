@@ -13,37 +13,87 @@ export type Database = {
         Row: {
           author: string | null
           created_at: string | null
-          critic: string | null
-          favorite: boolean | null
+          created_by: string | null
           genre: string | null
           id: string
-          rating: string | null
-          started: string | null
           title: string | null
         }
         Insert: {
           author?: string | null
           created_at?: string | null
-          critic?: string | null
-          favorite?: boolean | null
+          created_by?: string | null
           genre?: string | null
           id?: string
-          rating?: string | null
-          started?: string | null
           title?: string | null
         }
         Update: {
           author?: string | null
           created_at?: string | null
-          critic?: string | null
-          favorite?: boolean | null
+          created_by?: string | null
           genre?: string | null
           id?: string
-          rating?: string | null
-          started?: string | null
           title?: string | null
         }
         Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_premium: boolean | null
+          username: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          is_premium?: boolean | null
+          username?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_premium?: boolean | null
+          username?: string | null
+        }
+        Relationships: []
+      }
+      user_books: {
+        Row: {
+          added_at: string | null
+          book_id: string | null
+          favorite: boolean | null
+          id: string
+          note: number | null
+          review: string | null
+          user_id: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          book_id?: string | null
+          favorite?: boolean | null
+          id?: string
+          note?: number | null
+          review?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          book_id?: string | null
+          favorite?: boolean | null
+          id?: string
+          note?: number | null
+          review?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -71,7 +71,7 @@
           <div class="flex flex-col items-center space-y-1">
             <div class="text-xs text-gray-500">
               <p v-if="book.genre">Genre: {{ book.genre }}</p>
-              <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
+              <p>Ajouté le: {{ formatDate(book.added_at) }}</p>
             </div>
           </div>
         </div>
@@ -82,22 +82,60 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useBooks } from "~/composables/useBooks"; // ✨ 1. Importer notre composable
-import type { Book } from "~/types/book";
+// ✨ 1. On importe les bons composables
+import { useUserBooks } from "~/composables/useUserBooks";
+import { useSupabaseUser } from "#imports";
 
-// ✨ 2. Initialiser le composable une seule fois et déstructurer les méthodes nécessaires
-const { fetchBooks, updateBookFavorite } = useBooks();
+// Le type pour nos livres, identique à celui de la page "Mes Livres" pour la cohérence
+type DisplayBook = {
+  id: string;
+  userBookId: string;
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+  favorite: boolean | null;
+  rating: number | null;
+  added_at: string | null;
+};
 
-// Les refs pour gérer l'état de l'interface
-const favoriteBooks = ref<Book[]>([]);
+// ✨ 2. On récupère l'utilisateur et on initialise le composable
+const user = useSupabaseUser();
+const { fetchFavoriteBooks, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
+
+// Les refs pour l'état de l'interface
+const favoriteBooks = ref<DisplayBook[]>([]);
 const pending = ref(true);
 const error = ref<Error | null>(null);
 
-// Chargement des livres favoris au montage du composant
+// ✨ 3. Au montage, on charge UNIQUEMENT les livres favoris de l'utilisateur
 onMounted(async () => {
+  if (!user.value) {
+    pending.value = false;
+    console.log("Aucun utilisateur connecté.");
+    // Ici aussi, on pourrait afficher un message pour inviter à la connexion
+    return;
+  }
+
   try {
-    const books = await fetchBooks();
-    favoriteBooks.value = books.filter((book) => book.favorite);
+    // Appel direct à la fonction optimisée de notre composable
+    const favoriteBooksFromDb = await fetchFavoriteBooks(user.value.id);
+
+    // On transforme les données pour le template (même logique que précédemment)
+    favoriteBooks.value = favoriteBooksFromDb
+      .map((userBook) => {
+        if (!userBook.books) return null;
+        return {
+          id: userBook.books.id,
+          userBookId: userBook.id,
+          title: userBook.books.title,
+          author: userBook.books.author,
+          genre: userBook.books.genre,
+          favorite: userBook.favorite,
+          rating: userBook.note,
+          added_at: userBook.added_at,
+        };
+      })
+      .filter((book): book is DisplayBook => book !== null);
   } catch (e) {
     console.error("Erreur attrapée dans le composant:", e);
     error.value = e as Error;
@@ -106,7 +144,34 @@ onMounted(async () => {
   }
 });
 
-// Correspondance entre les genres et les images de couverture (INCHANGÉ)
+// ✨ 4. Fonction pour retirer un livre des favoris
+const toggleFavorite = async (book: DisplayBook) => {
+  if (!user.value) {
+    alert("Veuillez vous connecter pour gérer vos favoris.");
+    return;
+  }
+
+  // Mise à jour optimiste : on retire immédiatement le livre de la liste
+  const index = favoriteBooks.value.findIndex((b) => b.id === book.id);
+  if (index > -1) {
+    favoriteBooks.value.splice(index, 1);
+  }
+
+  try {
+    // On appelle la fonction du composable qui mettra le statut 'favorite' à false en BDD
+    await toggleFavoriteInDb(user.value.id, book.id);
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du favori:", err);
+    // En cas d'erreur, on annule le changement dans l'interface en ré-insérant le livre
+    if (index > -1) {
+      favoriteBooks.value.splice(index, 0, book);
+    }
+    alert("Une erreur est survenue. Impossible de retirer le favori.");
+  }
+};
+
+// ----- Fonctions utilitaires (INCHANGÉES) -----
+
 const genreToImageMap = {
   philosophie: "/images/cover/blue_sky.png",
   "policier/thriller": "/images/cover/green_nature.png",
@@ -126,8 +191,7 @@ const genreToImageMap = {
 const defaultCoverImage = "/images/cover/sand.png";
 type Genre = keyof typeof genreToImageMap;
 
-// Fonction pour obtenir l'image de couverture d'un livre (INCHANGÉ)
-const getBookCoverImage = (book: Book) => {
+const getBookCoverImage = (book: DisplayBook) => {
   if (!book.genre) {
     return defaultCoverImage;
   }
@@ -135,36 +199,16 @@ const getBookCoverImage = (book: Book) => {
   return genreToImageMap[normalizedGenre] || defaultCoverImage;
 };
 
-// Fonction utilitaire pour formater les dates (INCHANGÉ)
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return "Date inconnue";
   const date = new Date(dateString);
   return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
-};
-
-// Fonction pour basculer le statut favori
-const toggleFavorite = async (book: Book) => {
-  try {
-    // On met à jour l'état local pour une réactivité immédiate
-    book.favorite = !book.favorite;
-
-    // On appelle la BDD en arrière-plan
-    await updateBookFavorite(book.id, book.favorite);
-
-    // Si le livre n'est plus favori, on le retire de la liste
-    if (!book.favorite) {
-      favoriteBooks.value = favoriteBooks.value.filter((b) => b.id !== book.id);
-    }
-  } catch (err) {
-    console.error("Erreur lors de la mise à jour du favori:", err);
-    // En cas d'erreur, on annule le changement dans l'interface
-    book.favorite = !book.favorite;
-  }
 };
 
 // Meta données pour SEO
 useHead({
   title: "Mes Livres Favoris - Bibliothèque",
-  meta: [{ name: "description", content: "Consultez mes livres favoris" }],
+  meta: [{ name: "description", content: "Consultez la liste de vos livres favoris." }],
 });
 </script>
 

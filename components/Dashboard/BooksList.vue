@@ -71,7 +71,7 @@
           <div class="flex flex-col items-center space-y-1">
             <div class="text-xs text-gray-500">
               <p v-if="book.genre">Genre: {{ book.genre }}</p>
-              <p>Ajouté le: {{ formatDate(book.created_at) }}</p>
+              <p>Ajouté le: {{ formatDate(book.added_at) }}</p>
             </div>
           </div>
         </div>
@@ -82,32 +82,96 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { useBooks } from "~/composables/useBooks"; // ✨ 1. Importer notre composable
-import type { Book } from "~/types/book";
+// ✨ 1. On importe le composable pour les livres de l'utilisateur et celui pour récupérer l'utilisateur Supabase
+import { useUserBooks } from "~/composables/useUserBooks";
+import { useSupabaseUser } from "#imports";
 
-// ✨ 2. Initialiser le composable une seule fois et déstructurer les méthodes nécessaires
-const { fetchBooks, updateBookFavorite } = useBooks();
+// Le type pour nos livres après traitement. On l'adapte pour qu'il contienne ce dont le template a besoin.
+type DisplayBook = {
+  id: string; // ID du livre
+  userBookId: string; // ID de la relation (table user_books)
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+  favorite: boolean | null;
+  rating: number | null; // La note de l'utilisateur
+  added_at: string | null; // La date où l'utilisateur a ajouté le livre
+};
 
-// Les refs pour gérer l'état de l'interface, le template est déjà prêt pour ça
-const books = ref<Book[]>([]);
-const pending = ref(true); // On commence en mode chargement
+// ✨ 2. On récupère l'utilisateur connecté et on initialise le bon composable
+const user = useSupabaseUser();
+const { fetchUserBooksWithDetails, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
+
+// Refs pour l'état de l'interface
+const books = ref<DisplayBook[]>([]);
+const pending = ref(true);
 const error = ref<Error | null>(null);
 
-// ✨ 3. Remplacer useFetch par un appel direct à notre composable au montage du composant
+// ✨ 3. Au montage, on charge les livres de l'utilisateur connecté
 onMounted(async () => {
+  // On s'assure qu'un utilisateur est bien connecté
+  if (!user.value) {
+    pending.value = false;
+    // Optionnel : vous pourriez rediriger vers la page de connexion ici
+    // ou afficher un message indiquant qu'il faut se connecter.
+    console.log("Aucun utilisateur connecté.");
+    return;
+  }
+
   try {
-    // La fonction fetchBooks vient directement de notre composable
-    books.value = await fetchBooks();
+    // On appelle la fonction qui récupère les livres de l'utilisateur avec leurs détails
+    const userBooksWithDetails = await fetchUserBooksWithDetails(user.value.id);
+
+    // On transforme les données pour correspondre parfaitement au template
+    books.value = userBooksWithDetails
+      .map((userBook) => {
+        // Si pour une raison étrange la relation existe mais que le livre a été supprimé
+        if (!userBook.books) return null;
+
+        return {
+          id: userBook.books.id,
+          userBookId: userBook.id, // Important pour les futures mises à jour
+          title: userBook.books.title,
+          author: userBook.books.author,
+          genre: userBook.books.genre,
+          favorite: userBook.favorite,
+          rating: userBook.note, // On fait correspondre 'note' de la DB à 'rating' dans le template
+          added_at: userBook.added_at, // On utilise la date d'ajout par l'utilisateur
+        };
+      })
+      .filter((book): book is DisplayBook => book !== null); // On retire les éventuels résultats nuls
   } catch (e) {
     console.error("Erreur attrapée dans le composant:", e);
     error.value = e as Error;
   } finally {
-    // Quoi qu'il arrive (succès ou erreur), le chargement est terminé
     pending.value = false;
   }
 });
 
-// Correspondance entre les genres et les images de couverture (INCHANGÉ)
+// ✨ 4. La fonction pour basculer le favori utilise maintenant la logique du composable
+const toggleFavorite = async (book: DisplayBook) => {
+  if (!user.value) {
+    alert("Veuillez vous connecter pour gérer vos favoris.");
+    return;
+  }
+
+  // Mise à jour optimiste pour une UI réactive
+  const originalFavoriteStatus = book.favorite;
+  book.favorite = !book.favorite;
+
+  try {
+    // Appel à la fonction du composable qui gère toute la logique
+    await toggleFavoriteInDb(user.value.id, book.id);
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du favori:", err);
+    // En cas d'erreur, on annule le changement dans l'interface
+    book.favorite = originalFavoriteStatus;
+    alert("Une erreur est survenue. Impossible de mettre à jour le favori.");
+  }
+};
+
+// ----- Fonctions utilitaires (INCHANGÉES) -----
+
 const genreToImageMap = {
   philosophie: "/images/cover/blue_sky.png",
   "policier/thriller": "/images/cover/green_nature.png",
@@ -127,8 +191,7 @@ const genreToImageMap = {
 const defaultCoverImage = "/images/cover/sand.png";
 type Genre = keyof typeof genreToImageMap;
 
-// Fonction pour obtenir l'image de couverture d'un livre (INCHANGÉ)
-const getBookCoverImage = (book: Book) => {
+const getBookCoverImage = (book: DisplayBook) => {
   if (!book.genre) {
     return defaultCoverImage;
   }
@@ -136,44 +199,16 @@ const getBookCoverImage = (book: Book) => {
   return genreToImageMap[normalizedGenre] || defaultCoverImage;
 };
 
-// Fonction utilitaire pour formater les dates (INCHANGÉ)
-const formatDate = (dateString: string): string => {
+const formatDate = (dateString: string | null): string => {
+  if (!dateString) return "Date inconnue";
   const date = new Date(dateString);
   return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
 };
 
-// ✨ 4. Fonction pour basculer le statut favori, maintenant plus propre
-const toggleFavorite = async (book: Book) => {
-  try {
-    // On met à jour l'état local pour une réactivité immédiate (optimistic update)
-    book.favorite = !book.favorite;
-
-    // On appelle la BDD en arrière-plan avec la méthode du composable
-    await updateBookFavorite(book.id, book.favorite);
-
-    // Note: L'approche "optimistic update" ci-dessus est très rapide pour l'utilisateur.
-    // Si vous préférez attendre la confirmation de la base de données, vous pouvez utiliser votre ancienne méthode :
-    /*
-    const updatedBook = await updateBookFavorite(book.id, !book.favorite);
-    if (updatedBook) {
-      const index = books.value.findIndex((b) => b.id === book.id);
-      if (index !== -1) {
-        books.value[index] = updatedBook;
-      }
-    }
-    */
-  } catch (err) {
-    console.error("Erreur lors de la mise à jour du favori:", err);
-    // En cas d'erreur, on annule le changement dans l'interface
-    book.favorite = !book.favorite;
-    // Ici, vous pourriez afficher une notification d'erreur à l'utilisateur.
-  }
-};
-
-// Meta données pour SEO (INCHANGÉ)
+// Meta données pour SEO
 useHead({
-  title: "Mes Livres - Bibliothèque",
-  meta: [{ name: "description", content: "Consultez ma collection de livres" }],
+  title: "Mes Livres - Bibliothèque Personnelle",
+  meta: [{ name: "description", content: "Consultez votre collection de livres personnels." }],
 });
 </script>
 
