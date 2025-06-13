@@ -105,8 +105,15 @@ const loading = ref(false);
 const error = ref("");
 
 const handleRegister = async () => {
+  // Validation des mots de passe
   if (password.value !== confirmPassword.value) {
     error.value = "Les mots de passe ne correspondent pas";
+    return;
+  }
+
+  // Validation du nom d'utilisateur
+  if (username.value.trim().length < 3) {
+    error.value = "Le nom d'utilisateur doit contenir au moins 3 caractères";
     return;
   }
 
@@ -114,17 +121,36 @@ const handleRegister = async () => {
   error.value = "";
 
   try {
-    const { error: authError } = await signUp(email.value, password.value);
+    // Appel du signUp avec le nom d'utilisateur
+    const { data, error: authError } = await signUp(email.value, password.value, username.value.trim());
 
     if (authError) {
-      error.value = authError.message || "Une erreur est survenue lors de la création du compte";
+      // Gestion des erreurs spécifiques de Supabase
+      if (authError.message.includes("already registered")) {
+        error.value = "Cette adresse email est déjà utilisée";
+      } else if (authError.message.includes("Password should be")) {
+        error.value = "Le mot de passe doit contenir au moins 6 caractères";
+      } else {
+        error.value = authError.message || "Une erreur est survenue lors de la création du compte";
+      }
     } else {
-      console.log("Compte créé avec succès");
-      await router.push("/dashboard/library");
+      console.log("Compte créé avec succès", data);
+
+      // Message de succès si l'utilisateur doit confirmer son email
+      if (data.user && !data.session) {
+        error.value = ""; // Reset error
+        // Vous pouvez afficher un message de succès ici
+        console.log("Veuillez vérifier votre email pour confirmer votre compte");
+        // Optionnel: rediriger vers une page de confirmation
+        // await router.push("/auth/confirm-email");
+      } else {
+        // L'utilisateur est connecté automatiquement
+        await router.push("/dashboard/library");
+      }
     }
   } catch (err: any) {
     console.error("Erreur lors de la création du compte:", err);
-    error.value = "Une erreur est survenue lors de la création du compte";
+    error.value = "Une erreur inattendue est survenue";
   } finally {
     loading.value = false;
   }
