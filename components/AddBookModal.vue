@@ -21,22 +21,47 @@
         {{ error }}
       </div>
 
+      <!-- Message d'information si livre déjà dans la bibliothèque -->
+      <div v-if="bookAlreadyInLibrary" class="mb-4 p-3 bg-orange-100 border border-orange-400 text-orange-700 rounded">
+        Ce livre est déjà dans votre bibliothèque !
+      </div>
+
       <form @submit.prevent="handleSubmit">
         <div class="space-y-4">
           <!-- Informations du livre (table books) -->
           <div class="border-b pb-4 mb-4">
             <h3 class="text-lg font-semibold mb-3 text-gray-700">Informations du livre</h3>
 
-            <div>
+            <div class="relative">
               <label class="block text-sm font-medium mb-1" for="title">Titre *</label>
               <input
                 v-model="bookData.title"
                 type="text"
                 id="title"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="isLoading"
+                :disabled="!!(isLoading || selectedExistingBook)"
                 required
               />
+
+              <!-- Suggestions pour le titre -->
+              <div
+                v-if="showSuggestions && suggestions.length > 0 && !selectedExistingBook"
+                class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto"
+              >
+                <div
+                  v-for="book in suggestions"
+                  :key="book.id"
+                  @click="selectExistingBook(book)"
+                  class="p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                >
+                  <div class="font-medium text-sm">{{ book.title }}</div>
+                  <div class="text-gray-600 text-xs">par {{ book.author }}</div>
+                  <div v-if="book.genre" class="text-gray-500 text-xs">{{ book.genre }}</div>
+                  <div v-if="userHasBook[book.id]" class="text-orange-600 text-xs font-medium">
+                    ⚠️ Déjà dans votre bibliothèque
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div class="mt-4">
@@ -46,7 +71,7 @@
                 type="text"
                 id="author"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="isLoading"
+                :disabled="!!(isLoading || selectedExistingBook)"
                 required
               />
             </div>
@@ -57,7 +82,7 @@
                 v-model="bookData.genre"
                 id="genre"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="isLoading"
+                :disabled="isLoading || !!selectedExistingBook"
               >
                 <option value="">Sélectionnez une catégorie</option>
                 <option value="philosophie">Philosophie</option>
@@ -76,6 +101,20 @@
                 <option value="cuisine">Cuisine</option>
                 <option value="autre">Autre</option>
               </select>
+            </div>
+
+            <!-- Affichage du livre sélectionné -->
+            <div v-if="selectedExistingBook" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="font-medium text-blue-900">Livre existant sélectionné :</h4>
+                  <p class="text-blue-800">{{ selectedExistingBook.title }}</p>
+                  <p class="text-blue-700 text-sm">par {{ selectedExistingBook.author }}</p>
+                </div>
+                <button type="button" @click="deselectBook" class="text-blue-600 hover:text-blue-800 text-sm underline">
+                  Modifier
+                </button>
+              </div>
             </div>
           </div>
 
@@ -139,7 +178,7 @@
           <button
             type="submit"
             class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 flex items-center"
-            :disabled="isLoading"
+            :disabled="!!(isLoading || bookAlreadyInLibrary)"
           >
             <span v-if="isLoading" class="mr-2">
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -159,7 +198,9 @@
                 ></path>
               </svg>
             </span>
-            {{ isLoading ? "Ajout en cours..." : "Ajouter le livre" }}
+            {{
+              isLoading ? "Ajout en cours..." : selectedExistingBook ? "Ajouter à ma bibliothèque" : "Créer et ajouter"
+            }}
           </button>
         </div>
       </form>
@@ -168,7 +209,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+interface BookData {
+  title: string;
+  author: string;
+  genre: string;
+  id?: string;
+}
+
+interface User {
+  id: string;
+}
+
+// Type for user's book collection
+interface UserBookCollection {
+  [key: string]: boolean;
+}
+
+// Type for selected existing book
+interface SelectedBook {
+  id: string;
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+  created_at: string | null;
+  created_by: string | null;
+}
+
+import { ref, watch, computed, nextTick } from "vue";
+import { useUserProfiles } from "~/composables/useUserProfiles";
 
 const emit = defineEmits(["close", "book-added"]);
 
@@ -184,16 +252,40 @@ const props = defineProps({
 });
 
 // Composables
-const { addBook } = useBooks();
-const { addUserBook } = useUserBooks(); // Vous devrez créer ce composable
+const { addBook, searchBooks, checkUserHasBook, findExactMatch } = useBooks();
+const { getUserProfile } = useUserProfiles();
+
+// Fonction pour vérifier si l'utilisateur est premium
+const isUserPremium = async (): Promise<boolean> => {
+  if (!user.value) return false;
+
+  try {
+    const profile = await getUserProfile(user.value.id);
+    return profile?.is_premium || false;
+  } catch (error) {
+    console.error("Erreur lors de la vérification du statut premium:", error);
+    return false;
+  }
+};
+const { updateUserBookPreferences } = useBooks();
+
+import type { Database } from "~/types/database.types";
+
+// State
+const suggestions = ref<Database["public"]["Tables"]["books"]["Row"][]>([]);
+const showSuggestions = ref(false);
 const user = useSupabaseUser();
 
 // État
 const isLoading = ref(false);
 const error = ref("");
+const selectedExistingBook = ref<SelectedBook | null>(null);
 
-// Données du livre (table books)
-const bookData = ref({
+// Fonction pour vérifier si un livre est sélectionné
+const isBookSelected = computed(() => selectedExistingBook.value !== null);
+const userHasBook = ref<UserBookCollection>({});
+
+const bookData = ref<BookData>({
   title: "",
   author: "",
   genre: "",
@@ -204,6 +296,76 @@ const userBookData = ref({
   favorite: false,
   note: 0 as number,
   review: "",
+});
+
+// Computed pour vérifier si le livre est déjà dans la bibliothèque
+const bookAlreadyInLibrary = computed(() => {
+  return selectedExistingBook.value && userHasBook.value[selectedExistingBook.value.id];
+});
+
+// Fonction debounce pour éviter trop d'appels API
+const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): T => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  return ((...args: Parameters<T>): ReturnType<T> => {
+    const later = () => {
+      clearTimeout(timeout);
+      return func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+    return func(...args); // Return the initial call result immediately
+  }) as T;
+};
+
+// Fonction de recherche debouncée
+const debouncedSearch = debounce(async (query) => {
+  if (!user.value || query.length < 2) {
+    suggestions.value = [];
+    showSuggestions.value = false;
+    return;
+  }
+
+  try {
+    const results = await searchBooks(query);
+    suggestions.value = results;
+
+    // Vérifier pour chaque livre si l'utilisateur l'a déjà
+    if (!user.value) {
+      console.error("User is not authenticated");
+      return;
+    }
+
+    // Type assertion to help TypeScript understand user.value is not null
+    const userId = user.value!.id;
+
+    const hasBookChecks = await Promise.all(
+      results.map(async (book) => {
+        const hasIt = await checkUserHasBook(userId, book.id);
+        return { bookId: book.id, hasIt };
+      })
+    );
+
+    // Mettre à jour l'état userHasBook
+    const newUserHasBook: Record<string, boolean> = {};
+    hasBookChecks.forEach(({ bookId, hasIt }) => {
+      newUserHasBook[bookId] = hasIt;
+    });
+    userHasBook.value = newUserHasBook;
+
+    showSuggestions.value = results.length > 0;
+  } catch (err) {
+    console.error("Erreur lors de la recherche:", err);
+  }
+}, 300);
+
+// Watch sur les changements de titre et auteur
+watch([() => bookData.value.title, () => bookData.value.author], ([title, author]) => {
+  if (!selectedExistingBook.value && (title || author)) {
+    const query = `${title} ${author}`.trim();
+    if (query.length >= 2) {
+      debouncedSearch(query);
+    }
+  }
 });
 
 // Watch pour gérer le scroll du body
@@ -230,7 +392,33 @@ const resetForm = () => {
     note: 0,
     review: "",
   };
+  selectedExistingBook.value = null;
+  suggestions.value = [];
+  showSuggestions.value = false;
+  userHasBook.value = {};
   error.value = "";
+};
+
+const selectExistingBook = (book: SelectedBook) => {
+  selectedExistingBook.value = book;
+  bookData.value = {
+    title: book.title || "",
+    author: book.author || "",
+    genre: book.genre || "",
+  };
+  showSuggestions.value = false;
+};
+
+const deselectBook = () => {
+  selectedExistingBook.value = null;
+  bookData.value = {
+    title: "",
+    author: "",
+    genre: "",
+  };
+  suggestions.value = [];
+  showSuggestions.value = false;
+  userHasBook.value = {};
 };
 
 const closeModal = () => {
@@ -250,39 +438,69 @@ const handleSubmit = async () => {
     return;
   }
 
-  isLoading.value = true;
-  error.value = "";
+  // Vérifier si c'est un livre existant déjà dans la bibliothèque
+  if (selectedExistingBook.value && userHasBook.value[selectedExistingBook.value.id]) {
+    error.value = "Ce livre est déjà dans votre bibliothèque";
+    return;
+  }
 
   try {
-    // 1. Créer le livre
-    const newBook = await addBook({
-      title: bookData.value.title.trim(),
-      author: bookData.value.author.trim(),
-      genre: bookData.value.genre || null,
-      created_by: user.value.id,
-      created_at: new Date().toISOString(),
-    });
+    isLoading.value = true;
+    error.value = "";
 
-    // 2. Créer l'entrée user_books si nécessaire
-    if (userBookData.value.favorite || userBookData.value.note || userBookData.value.review.trim()) {
-      await addUserBook({
-        user_id: user.value.id,
-        book_id: newBook.id,
+    // Vérifier si l'utilisateur est premium
+    const isPremium = await isUserPremium();
+
+    // Si l'utilisateur n'est pas premium, afficher un message et retourner
+    if (!isPremium) {
+      error.value = "Cette fonctionnalité est réservée aux utilisateurs premium.";
+      isLoading.value = false;
+      return;
+    }
+
+    // Vérifier si le livre existe déjà
+    const existingBook = await findExactMatch(bookData.value.title, bookData.value.author);
+
+    if (existingBook) {
+      // Si le livre existe déjà, vérifier si l'utilisateur l'a déjà dans sa bibliothèque
+      const hasBook = await checkUserHasBook(user.value.id, existingBook.id);
+
+      if (hasBook) {
+        error.value = "Ce livre est déjà dans votre bibliothèque !";
+        isLoading.value = false;
+        return;
+      }
+
+      // Ajouter le livre existant à la bibliothèque de l'utilisateur
+      await updateUserBookPreferences(user.value.id, existingBook.id, {
         favorite: userBookData.value.favorite,
         note: userBookData.value.note,
-        review: userBookData.value.review.trim() || null,
-        added_at: new Date().toISOString(),
+        review: userBookData.value.review,
+      });
+    } else {
+      // Créer le nouveau livre
+      const newBook = await addBook({
+        title: bookData.value.title,
+        author: bookData.value.author,
+        genre: bookData.value.genre,
+      });
+
+      // Ajouter le livre à la bibliothèque de l'utilisateur
+      await updateUserBookPreferences(user.value.id, newBook.id, {
+        favorite: userBookData.value.favorite,
+        note: userBookData.value.note,
+        review: userBookData.value.review,
       });
     }
 
-    // 3. Émettre l'événement de succès
-    emit("book-added", newBook);
-
-    // 4. Fermer la modale
-    emit("close");
-  } catch (err) {
-    console.error("Erreur lors de l'ajout du livre:", err);
-    error.value = err instanceof Error ? err.message : "Erreur lors de l'ajout du livre";
+    // Réinitialiser le formulaire et fermer le modal
+    resetForm();
+    emit("book-added");
+    closeModal();
+  } catch (error: unknown) {
+    console.error("Erreur lors de l'ajout du livre:", error);
+    const errorMessage = "Une erreur est survenue lors de l'ajout du livre. Veuillez réessayer.";
+    error = errorMessage;
   } finally {
     isLoading.value = false;
   }

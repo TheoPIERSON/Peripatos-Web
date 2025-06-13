@@ -10,6 +10,92 @@ export const useBooks = () => {
   type BookInsert = Database["public"]["Tables"]["books"]["Insert"];
   type BookUpdate = Database["public"]["Tables"]["books"]["Update"];
 
+  // NOUVELLE FONCTION - Rechercher des livres existants
+  const searchBooks = async (query: string): Promise<Book[]> => {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    try {
+      const searchTerm = query.trim();
+
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .or(`title.ilike.%${searchTerm}%,author.ilike.%${searchTerm}%`)
+        .order("created_at", { ascending: false })
+        .limit(10); // Limiter à 10 résultats pour la performance
+
+      if (error) {
+        console.error("Erreur Supabase lors de la recherche de livres:", error);
+        throw new Error(`Impossible de rechercher les livres: ${error.message}`);
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Erreur lors de la recherche de livres:", error);
+      throw error;
+    }
+  };
+
+  // NOUVELLE FONCTION - Rechercher des livres par titre et auteur exact
+  const findExactMatch = async (title: string, author: string): Promise<Book | null> => {
+    if (!title?.trim() || !author?.trim()) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("books")
+        .select("*")
+        .ilike("title", title.trim())
+        .ilike("author", author.trim())
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return null; // Aucun livre correspondant trouvé
+        }
+        console.error("Erreur Supabase lors de la recherche exacte:", error);
+        throw new Error(`Erreur lors de la recherche: ${error.message}`);
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de la recherche exacte:", error);
+      throw error;
+    }
+  };
+
+  // NOUVELLE FONCTION - Vérifier si un utilisateur a déjà ce livre dans sa bibliothèque
+  const checkUserHasBook = async (userId: string, bookId: string): Promise<boolean> => {
+    if (!userId || !bookId) {
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from("user_books")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("book_id", bookId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          return false; // L'utilisateur n'a pas ce livre
+        }
+        console.error("Erreur lors de la vérification:", error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error("Erreur lors de la vérification de possession du livre:", error);
+      return false;
+    }
+  };
+
   // Récupérer tous les livres
   const fetchBooks = async (): Promise<Book[]> => {
     try {
@@ -219,6 +305,34 @@ export const useBooks = () => {
     }
   };
 
+  // Mettre à jour les préférences d'un livre pour un utilisateur
+  const updateUserBookPreferences = async (
+    userId: string,
+    bookId: string,
+    updates: {
+      favorite?: boolean;
+      note?: number;
+      review?: string;
+      added_at?: string;
+    }
+  ): Promise<void> => {
+    if (!userId || !bookId) {
+      throw new Error("ID utilisateur et ID livre requis");
+    }
+
+    try {
+      const { error } = await supabase.from("user_books").update(updates).eq("user_id", userId).eq("book_id", bookId);
+
+      if (error) {
+        console.error("Erreur lors de la mise à jour des préférences:", error);
+        throw new Error(`Impossible de mettre à jour les préférences: ${error.message}`);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des préférences:", error);
+      throw error;
+    }
+  };
+
   return {
     // Types exportés pour utilisation dans les composants
     types: {
@@ -226,7 +340,7 @@ export const useBooks = () => {
       BookInsert: {} as BookInsert,
       BookUpdate: {} as BookUpdate,
     },
-    // Fonctions
+    // Fonctions existantes
     fetchBooks,
     fetchBookById,
     addBook,
@@ -236,5 +350,10 @@ export const useBooks = () => {
     isBookAssociated,
     associateBook,
     disassociateBook,
+    // NOUVELLES FONCTIONS
+    searchBooks,
+    findExactMatch,
+    checkUserHasBook,
+    updateUserBookPreferences,
   } as const;
 };
