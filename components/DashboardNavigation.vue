@@ -7,11 +7,20 @@
     >
       <div class="text-center grid place-items-center">
         <NuxtLink to="/" class="text-2xl font-bold text-primary">Peripatos</NuxtLink>
-        <img
-          src="/images/aristote.png"
-          alt="Avatar"
-          class="h-16 w-16 rounded-full object-cover cursor-pointer relative border-3 border-green-500 mt-4"
-        />
+        <div class="flex flex-col items-center">
+          <img
+            src="/images/aristote.png"
+            alt="Avatar"
+            class="h-16 w-16 rounded-full object-cover cursor-pointer relative border-3 mt-4"
+            :class="profile?.is_premium ? 'border-green-500' : 'border-yellow-500'"
+          />
+          <div class="mt-2">
+            <span class="text-sm font-medium">{{ profile?.username }}</span>
+            <div v-if="profile?.is_premium" class="mt-1">
+              <span class="text-xs text-green-600">Membre premium</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
     <button
@@ -57,11 +66,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
-import AddBookModal from "./AddBookModal.vue";
+import { ref, computed, nextTick, watch } from "vue";
+import { useAuth } from "~/composables/useAuth";
 import { useBooks } from "~/composables/useBooks";
+import AddBookModal from "./AddBookModal.vue";
 
 const { addBook } = useBooks();
+const { user, getProfile } = useAuth();
+
+interface UserProfile {
+  id: string;
+  username: string | null;
+  is_premium: boolean | null;
+  created_at: string | null;
+}
+
+const profile = ref<UserProfile | null>(null);
+
+// Récupérer le profil quand l'utilisateur est connecté
+watch(
+  user,
+  async (newUser) => {
+    if (newUser) {
+      const { data, error } = await getProfile(newUser.id);
+      if (error) {
+        console.error("Erreur lors de la récupération du profil:", error);
+        return;
+      }
+      profile.value = data;
+    } else {
+      profile.value = null;
+    }
+  },
+  { immediate: true }
+);
+
 const isModalOpen = ref(false);
 const isModalVisible = ref(false);
 
