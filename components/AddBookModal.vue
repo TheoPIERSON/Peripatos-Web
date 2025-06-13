@@ -39,13 +39,13 @@
                 type="text"
                 id="title"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="!!(isLoading || selectedExistingBook)"
+                :disabled="isLoading || !!selectedExistingBook"
                 required
               />
 
               <!-- Suggestions pour le titre -->
               <div
-                v-if="showSuggestions && suggestions.length > 0 && !selectedExistingBook"
+                v-if="showSuggestions && suggestions.length > 0 && !hasSelectedBook"
                 class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto"
               >
                 <div
@@ -71,7 +71,7 @@
                 type="text"
                 id="author"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="!!(isLoading || selectedExistingBook)"
+                :disabled="isLoading || !!selectedExistingBook"
                 required
               />
             </div>
@@ -82,7 +82,7 @@
                 v-model="bookData.genre"
                 id="genre"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="isLoading || !!selectedExistingBook"
+                :disabled="isLoading"
               >
                 <option value="">Sélectionnez une catégorie</option>
                 <option value="philosophie">Philosophie</option>
@@ -178,7 +178,7 @@
           <button
             type="submit"
             class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 flex items-center"
-            :disabled="!!(isLoading || bookAlreadyInLibrary)"
+            :disabled="isLoading || bookAlreadyInLibrary"
           >
             <span v-if="isLoading" class="mr-2">
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -209,34 +209,20 @@
 </template>
 
 <script setup lang="ts">
-interface BookData {
-  title: string;
-  author: string;
-  genre: string;
-  id?: string;
-}
-
-interface User {
-  id: string;
-}
-
-// Type for user's book collection
-interface UserBookCollection {
-  [key: string]: boolean;
-}
-
-// Type for selected existing book
-interface SelectedBook {
-  id: string;
-  title: string | null;
-  author: string | null;
-  genre: string | null;
-  created_at: string | null;
-  created_by: string | null;
-}
-
 import { ref, watch, computed, nextTick } from "vue";
+// Type for setTimeout return value in web environment
 import { useUserProfiles } from "~/composables/useUserProfiles";
+import type { Database } from "~/types/database.types";
+
+// Types from useBooks
+interface UseBooksReturn {
+  addBook: (
+    book: Database["public"]["Tables"]["books"]["Insert"]
+  ) => Promise<Database["public"]["Tables"]["books"]["Row"]>;
+  searchBooks: (query: string) => Promise<Database["public"]["Tables"]["books"]["Row"][]>;
+  checkUserHasBook: (userId: string, bookId: string) => Promise<boolean>;
+  findExactMatch: (title: string, author: string) => Promise<Database["public"]["Tables"]["books"]["Row"] | null>;
+}
 
 const emit = defineEmits(["close", "book-added"]);
 
@@ -252,40 +238,33 @@ const props = defineProps({
 });
 
 // Composables
-const { addBook, searchBooks, checkUserHasBook, findExactMatch } = useBooks();
-const { getUserProfile } = useUserProfiles();
-
-// Fonction pour vérifier si l'utilisateur est premium
-const isUserPremium = async (): Promise<boolean> => {
-  if (!user.value) return false;
-
-  try {
-    const profile = await getUserProfile(user.value.id);
-    return profile?.is_premium || false;
-  } catch (error) {
-    console.error("Erreur lors de la vérification du statut premium:", error);
-    return false;
-  }
-};
-const { updateUserBookPreferences } = useBooks();
-
-import type { Database } from "~/types/database.types";
-
-// State
-const suggestions = ref<Database["public"]["Tables"]["books"]["Row"][]>([]);
-const showSuggestions = ref(false);
+const { addBook, searchBooks, checkUserHasBook, findExactMatch } = useBooks() as UseBooksReturn;
+const { addUserBook } = useUserBooks();
 const user = useSupabaseUser();
 
 // État
 const isLoading = ref(false);
 const error = ref("");
-const selectedExistingBook = ref<SelectedBook | null>(null);
+const suggestions = ref<Book[]>([]);
+const showSuggestions = ref(false);
 
-// Fonction pour vérifier si un livre est sélectionné
-const isBookSelected = computed(() => selectedExistingBook.value !== null);
-const userHasBook = ref<UserBookCollection>({});
+interface Book {
+  id: string;
+  title: string | null;
+  author: string | null;
+  genre: string | null;
+  created_at: string | null;
+  created_by: string | null;
+}
 
-const bookData = ref<BookData>({
+const selectedExistingBook = ref<Book | null>(null);
+const userHasBook = ref<Record<string, boolean>>({});
+
+// Computed pour vérifier si un livre est sélectionné
+const hasSelectedBook = computed(() => selectedExistingBook.value !== null);
+
+// Données du livre (table books)
+const bookData = ref({
   title: "",
   author: "",
   genre: "",
@@ -300,21 +279,20 @@ const userBookData = ref({
 
 // Computed pour vérifier si le livre est déjà dans la bibliothèque
 const bookAlreadyInLibrary = computed(() => {
-  return selectedExistingBook.value && userHasBook.value[selectedExistingBook.value.id];
+  return selectedExistingBook.value ? userHasBook.value[selectedExistingBook.value.id] : false;
 });
 
 // Fonction debounce pour éviter trop d'appels API
-const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): T => {
+const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
-  return ((...args: Parameters<T>): ReturnType<T> => {
+  return function executedFunction(...args: Parameters<T>) {
     const later = () => {
       clearTimeout(timeout);
-      return func(...args);
+      func(...args);
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
-    return func(...args); // Return the initial call result immediately
-  }) as T;
+  };
 };
 
 // Fonction de recherche debouncée
@@ -329,18 +307,14 @@ const debouncedSearch = debounce(async (query) => {
     const results = await searchBooks(query);
     suggestions.value = results;
 
+    // Store user value in a local variable to ensure it's not null
+    const currentUser = user.value;
+    if (!currentUser) return;
+
     // Vérifier pour chaque livre si l'utilisateur l'a déjà
-    if (!user.value) {
-      console.error("User is not authenticated");
-      return;
-    }
-
-    // Type assertion to help TypeScript understand user.value is not null
-    const userId = user.value!.id;
-
     const hasBookChecks = await Promise.all(
       results.map(async (book) => {
-        const hasIt = await checkUserHasBook(userId, book.id);
+        const hasIt = await checkUserHasBook(currentUser.id, book.id);
         return { bookId: book.id, hasIt };
       })
     );
@@ -350,6 +324,7 @@ const debouncedSearch = debounce(async (query) => {
     hasBookChecks.forEach(({ bookId, hasIt }) => {
       newUserHasBook[bookId] = hasIt;
     });
+
     userHasBook.value = newUserHasBook;
 
     showSuggestions.value = results.length > 0;
@@ -399,7 +374,7 @@ const resetForm = () => {
   error.value = "";
 };
 
-const selectExistingBook = (book: SelectedBook) => {
+const selectExistingBook = (book: Book) => {
   selectedExistingBook.value = book;
   bookData.value = {
     title: book.title || "",
@@ -444,63 +419,44 @@ const handleSubmit = async () => {
     return;
   }
 
+  isLoading.value = true;
+  error.value = "";
+
   try {
-    isLoading.value = true;
-    error.value = "";
+    let bookToAdd;
 
-    // Vérifier si l'utilisateur est premium
-    const isPremium = await isUserPremium();
-
-    // Si l'utilisateur n'est pas premium, afficher un message et retourner
-    if (!isPremium) {
-      error.value = "Cette fonctionnalité est réservée aux utilisateurs premium.";
-      isLoading.value = false;
-      return;
-    }
-
-    // Vérifier si le livre existe déjà
-    const existingBook = await findExactMatch(bookData.value.title, bookData.value.author);
-
-    if (existingBook) {
-      // Si le livre existe déjà, vérifier si l'utilisateur l'a déjà dans sa bibliothèque
-      const hasBook = await checkUserHasBook(user.value.id, existingBook.id);
-
-      if (hasBook) {
-        error.value = "Ce livre est déjà dans votre bibliothèque !";
-        isLoading.value = false;
-        return;
-      }
-
-      // Ajouter le livre existant à la bibliothèque de l'utilisateur
-      await updateUserBookPreferences(user.value.id, existingBook.id, {
-        favorite: userBookData.value.favorite,
-        note: userBookData.value.note,
-        review: userBookData.value.review,
-      });
+    if (selectedExistingBook.value) {
+      // Utiliser le livre existant
+      bookToAdd = selectedExistingBook.value;
     } else {
-      // Créer le nouveau livre
-      const newBook = await addBook({
-        title: bookData.value.title,
-        author: bookData.value.author,
-        genre: bookData.value.genre,
-      });
-
-      // Ajouter le livre à la bibliothèque de l'utilisateur
-      await updateUserBookPreferences(user.value.id, newBook.id, {
-        favorite: userBookData.value.favorite,
-        note: userBookData.value.note,
-        review: userBookData.value.review,
+      // Créer un nouveau livre
+      bookToAdd = await addBook({
+        title: bookData.value.title.trim(),
+        author: bookData.value.author.trim(),
+        genre: bookData.value.genre || null,
+        created_by: user.value.id,
+        created_at: new Date().toISOString(),
       });
     }
 
-    // Réinitialiser le formulaire et fermer le modal
-    resetForm();
-    emit("book-added");
-    closeModal();
-  } catch (error: unknown) {
-    console.error("Erreur lors de l'ajout du livre:", error);
-    const errorMessage = "Une erreur est survenue lors de l'ajout du livre. Veuillez réessayer.";
-    error = errorMessage;
+    // Créer l'entrée user_books
+    await addUserBook({
+      user_id: user.value.id,
+      book_id: bookToAdd.id,
+      favorite: userBookData.value.favorite,
+      note: userBookData.value.note,
+      review: userBookData.value.review.trim() || null,
+      added_at: new Date().toISOString(),
+    });
+
+    // Émettre l'événement de succès
+    emit("book-added", bookToAdd);
+
+    // Fermer la modale
+    emit("close");
+  } catch (err) {
+    console.error("Erreur lors de l'ajout du livre:", err);
+    error.value = err instanceof Error ? err.message : "Erreur lors de l'ajout du livre";
   } finally {
     isLoading.value = false;
   }
