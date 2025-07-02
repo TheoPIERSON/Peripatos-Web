@@ -1,5 +1,6 @@
 <template>
   <div class="container mx-auto px-4 py-8">
+    <EditBookModal :is-open="isEditModalOpen" :book="selectedBook" @close="closeEditModal" />
     <h1 class="text-3xl font-bold mb-8">Mes Livres</h1>
 
     <div v-if="pending" class="text-center">
@@ -19,6 +20,7 @@
         v-for="book in books"
         :key="book.id"
         class="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300 w-full max-w-sm mx-auto"
+        @click="openEditModal(book)"
       >
         <!-- Conteneur de la couverture -->
         <div
@@ -81,12 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, nextTick } from "vue";
 import { getRatingStars } from "~/utils/ratingUtils";
 // ✨ 1. On importe le composable pour les livres de l'utilisateur et celui pour récupérer l'utilisateur Supabase
 import { useUserBooks } from "~/composables/useUserBooks";
 import { useSupabaseUser } from "#imports";
 import { genreToImageMap, defaultCoverImage, type Genre } from "~/utils/genreToImageMap";
+import EditBookModal from "~/components/EditBookModal.vue";
 
 // Le type pour nos livres après traitement. On l'adapte pour qu'il contienne ce dont le template a besoin.
 type DisplayBook = {
@@ -98,11 +101,45 @@ type DisplayBook = {
   favorite: boolean | null;
   rating: number | null; // La note de l'utilisateur
   added_at: string | null; // La date où l'utilisateur a ajouté le livre
+  review: string | null; // Avis personnel
 };
 
 // ✨ 2. On récupère l'utilisateur connecté et on initialise le bon composable
 const user = useSupabaseUser();
 const { fetchUserBooksWithDetails, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
+
+// États pour la modale d'édition
+const isEditModalOpen = ref(false);
+const selectedBook = ref<DisplayBook | null>(null);
+
+const openModal = async () => {
+  isEditModalOpen.value = true;
+  await nextTick();
+  // Petit délai pour permettre au DOM de se mettre à jour
+  setTimeout(() => {
+    isEditModalOpen.value = true;
+  }, 10);
+};
+
+const closeModal = () => {
+  isEditModalOpen.value = false;
+  // Attendre la fin de l'animation avant de détruire le composant
+  setTimeout(() => {
+    isEditModalOpen.value = false;
+  }, 300);
+};
+
+// Fonction pour ouvrir la modale d'édition
+const openEditModal = (book: DisplayBook) => {
+  selectedBook.value = book;
+  isEditModalOpen.value = true;
+};
+
+// Fonction pour fermer la modale d'édition
+const closeEditModal = () => {
+  isEditModalOpen.value = false;
+  selectedBook.value = null;
+};
 
 // Refs pour l'état de l'interface
 const books = ref<DisplayBook[]>([]);
@@ -139,6 +176,7 @@ onMounted(async () => {
           favorite: userBook.favorite,
           rating: userBook.note, // On fait correspondre 'note' de la DB à 'rating' dans le template
           added_at: userBook.added_at, // On utilise la date d'ajout par l'utilisateur
+          review: userBook.review
         };
       })
       .filter((book): book is DisplayBook => book !== null); // On retire les éventuels résultats nuls
