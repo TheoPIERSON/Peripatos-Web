@@ -25,7 +25,7 @@
         </div>
         <div class="relative flex justify-center items-center">
           <img
-            src="/images/cover/blue_light.png"
+            src="/images/mockup-peripatos-library.png"
             alt="Visualisation de la bibliothèque Peripatos"
             class="rounded-lg shadow-xl max-w-full h-auto"
           />
