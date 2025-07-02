@@ -27,7 +27,7 @@
         <div class="flex items-center">
           <NuxtLink
             to="/register"
-            class="bg-accent text-black px-4 py-2 mx-4 rounded-md text-sm font-semibold hover:bg-yellow-dark transition-colors focus:outline-none focus:ring-2 focus:ring-yellow focus:ring-offset-2"
+            class="bg-accent text-black px-4 py-2 mx-4 rounded-md text-sm font-semibold hover:bg-yellow-dark transition-colors focus:outline-none focus:ring-2 focus:ring-yellow focus:ring-offset-2 hidden sm:block"
           >
             S'inscrire
           </NuxtLink>

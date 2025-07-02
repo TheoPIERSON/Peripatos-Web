@@ -83,6 +83,18 @@
             <span v-else>Créer un compte</span>
           </button>
         </div>
+        <div class="mt-6">
+          <button
+            @click="handleGoogleSignIn"
+            class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
+          >
+            <span class="flex items-center justify-center">
+              <Icon name="logos:google-icon" style="color: black" size="16" class="mr-2" />
+
+              S'inscrire avec Google
+            </span>
+          </button>
+        </div>
       </form>
       <div class="text-center">
         <NuxtLink to="/login" class="text-sm text-accent hover:text-accent-dark font-medium">
@@ -94,7 +106,7 @@
 </template>
 
 <script lang="ts" setup>
-const { signUp } = useAuth();
+const { signUp, signInWithGoogle } = useAuth();
 const router = useRouter();
 
 const username = ref("");

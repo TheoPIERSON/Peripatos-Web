@@ -66,6 +66,18 @@
             <span v-else>Se connecter</span>
           </button>
         </div>
+        <div class="mt-6">
+          <button
+            @click="handleGoogleSignIn"
+            class="w-full flex justify-center py-3 px-4 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
+          >
+            <span class="flex items-center justify-center">
+              <Icon name="logos:google-icon" style="color: black" size="16" class="mr-2" />
+
+              Se connecter avec Google
+            </span>
+          </button>
+        </div>
       </form>
 
       <div class="text-center">
@@ -78,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-const { signIn } = useAuth();
+const { signIn, signInWithGoogle } = useAuth();
 const router = useRouter();
 
 const email = ref("");
@@ -89,6 +101,25 @@ const error = ref("");
 const handleLogin = async () => {
   loading.value = true;
   error.value = "";
+
+  const handleGoogleSignIn = async () => {
+    loading.value = true;
+    error.value = "";
+
+    try {
+      const { error: authError } = await signInWithGoogle();
+      if (authError) {
+        error.value = authError.message || "Une erreur est survenue lors de la connexion avec Google";
+      } else {
+        console.log("Connexion Google réussie");
+        await router.push("/dashboard/library");
+      }
+    } catch (err) {
+      error.value = "Une erreur est survenue lors de la connexion avec Google";
+    } finally {
+      loading.value = false;
+    }
+  };
 
   try {
     const { error: authError } = await signIn(email.value, password.value);

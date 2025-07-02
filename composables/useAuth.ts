@@ -28,6 +28,16 @@ export const useAuth = () => {
     return { error };
   };
 
+  const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/dashboard", // ou autre route après login
+      },
+    });
+    return { data, error };
+  };
+
   // Fonction pour récupérer le profil de l'utilisateur
   const getProfile = async (userId: string) => {
     const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).single();
@@ -51,6 +61,7 @@ export const useAuth = () => {
     signUp,
     signIn,
     signOut,
+    signInWithGoogle,
     getProfile,
     updateProfile,
   };
