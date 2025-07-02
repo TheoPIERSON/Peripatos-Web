@@ -86,6 +86,7 @@ import { getRatingStars } from "~/utils/ratingUtils";
 // ✨ 1. On importe les bons composables
 import { useUserBooks } from "~/composables/useUserBooks";
 import { useSupabaseUser } from "#imports";
+import { genreToImageMap, defaultCoverImage, type Genre } from "~/utils/genreToImageMap";
 
 // Le type pour nos livres, identique à celui de la page "Mes Livres" pour la cohérence
 type DisplayBook = {
@@ -172,25 +173,6 @@ const toggleFavorite = async (book: DisplayBook) => {
 };
 
 // ----- Fonctions utilitaires (INCHANGÉES) -----
-
-const genreToImageMap = {
-  philosophie: "/images/cover/blue_sky.png",
-  "policier/thriller": "/images/cover/green_nature.png",
-  classique: "/images/cover/red_classic.png",
-  aventure: "/images/cover/orange_adventure.png",
-  romance: "/images/cover/pink_romance.png",
-  "science-fiction": "/images/cover/yellow.png",
-  histoire: "/images/cover/red_classic.png",
-  biographie: "/images/cover/green_nature.png",
-  essai: "/images/cover/blue_light.png",
-  roman: "/images/cover/red_classic.png",
-  fantaisie: "/images/cover/orange_adventure.png",
-  science: "/images/cover/orange_adventure.png",
-  cuisine: "/images/cover/orange_adventure.png",
-  "développement personnel": "/images/cover/green_.png",
-};
-const defaultCoverImage = "/images/cover/sand.png";
-type Genre = keyof typeof genreToImageMap;
 
 const getBookCoverImage = (book: DisplayBook) => {
   if (!book.genre) {
