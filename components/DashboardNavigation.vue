@@ -36,7 +36,7 @@
       class="flex flex-col items-center text-gray-700 hover:text-primary transition-colors mb-6 mt-6"
     >
       <Icon name="fluent-color:library-24" style="color: black" size="32" />
-      <span class="text-xs">Bibliothèque</span>
+      <span class="text-xs">Mes livres</span>
     </NuxtLink>
 
     <NuxtLink
