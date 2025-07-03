@@ -21,7 +21,24 @@
         {{ error }}
       </div>
 
-      <form>
+      <!-- Confirmation de suppression -->
+      <div v-if="showDeleteConfirm" class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
+        <p class="text-sm text-yellow-800 mb-3">Êtes-vous sûr de vouloir retirer ce livre de votre collection ?</p>
+        <div class="flex space-x-2">
+          <button
+            @click="confirmDelete"
+            :disabled="isDeleting"
+            class="px-3 py-1 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50"
+          >
+            {{ isDeleting ? "Suppression..." : "Confirmer" }}
+          </button>
+          <button @click="cancelDelete" class="px-3 py-1 bg-gray-300 text-gray-700 text-sm rounded hover:bg-gray-400">
+            Annuler
+          </button>
+        </div>
+      </div>
+
+      <form @submit.prevent="updateBook">
         <div class="space-y-4">
           <!-- Informations du livre (table books) -->
           <div class="border-b pb-4 mb-4">
@@ -76,7 +93,7 @@
                   id="review"
                   rows="3"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  :placeholder="book.review"
+                  :placeholder="book.review || 'Votre avis...'"
                 ></textarea>
               </div>
             </div>
@@ -85,17 +102,19 @@
 
         <div class="mt-6 flex justify-end space-x-4">
           <button
-            @click="closeModal"
+            @click="initiateDelete"
             type="button"
-            class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+            class="px-4 py-2 border border-red-300 text-red-600 rounded-md hover:bg-red-50 disabled:opacity-50"
+            :disabled="isDeleting"
           >
-            Retirer le livre
+            {{ isDeleting ? "Suppression..." : "Retirer le livre" }}
           </button>
           <button
             type="submit"
+            :disabled="isUpdating"
             class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 flex items-center"
           >
-            Valider
+            {{ isUpdating ? "Mise à jour..." : "Valider" }}
           </button>
         </div>
       </form>
@@ -119,7 +138,7 @@ interface UseBooksReturn {
   findExactMatch: (title: string, author: string) => Promise<Database["public"]["Tables"]["books"]["Row"] | null>;
 }
 
-const emit = defineEmits(["close", "book-added"]);
+const emit = defineEmits(["close", "book-updated", "book-deleted"]);
 
 const props = defineProps({
   isOpen: {
@@ -158,11 +177,14 @@ watch(
 
 // Composables
 const { searchBooks, checkUserHasBook } = useBooks() as UseBooksReturn;
-const { addUserBook } = useUserBooks();
+const { updateUserBook, deleteUserBook } = useUserBooks();
 const user = useSupabaseUser();
 
 // État
 const error = ref("");
+const isUpdating = ref(false);
+const isDeleting = ref(false);
+const showDeleteConfirm = ref(false);
 
 interface Book {
   id: string;
@@ -186,6 +208,21 @@ const userBookData = ref({
   note: 0 as number,
   review: "",
 });
+
+// Initialiser les données quand le livre change
+watch(
+  () => props.book,
+  (newBook) => {
+    if (newBook) {
+      userBookData.value = {
+        favorite: newBook.favorite || false,
+        note: newBook.rating || 0,
+        review: newBook.review || "",
+      };
+    }
+  },
+  { immediate: true }
+);
 
 // Fonction debounce pour éviter trop d'appels API
 const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
@@ -214,21 +251,84 @@ watch(
 );
 
 const resetForm = () => {
-  bookData.value = {
-    title: "",
-    author: "",
-    genre: "",
-  };
-  userBookData.value = {
-    favorite: false,
-    note: 0,
-    review: "",
-  };
+  if (props.book) {
+    userBookData.value = {
+      favorite: props.book.favorite || false,
+      note: props.book.rating || 0,
+      review: props.book.review || "",
+    };
+  }
   error.value = "";
+  showDeleteConfirm.value = false;
 };
 
 const closeModal = () => {
   emit("close");
+};
+
+// Fonction pour mettre à jour les données du livre
+const updateBook = async () => {
+  if (!user.value || !props.book) {
+    error.value = "Utilisateur non connecté ou livre non sélectionné";
+    return;
+  }
+
+  isUpdating.value = true;
+  error.value = "";
+
+  try {
+    await updateUserBook(props.book.userBookId, {
+      favorite: userBookData.value.favorite,
+      note: userBookData.value.note,
+      review: userBookData.value.review,
+    });
+
+    emit("book-updated", {
+      ...props.book,
+      favorite: userBookData.value.favorite,
+      rating: userBookData.value.note,
+      review: userBookData.value.review,
+    });
+
+    closeModal();
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour:", err);
+    error.value = "Erreur lors de la mise à jour du livre";
+  } finally {
+    isUpdating.value = false;
+  }
+};
+
+// Fonctions pour la suppression
+const initiateDelete = () => {
+  showDeleteConfirm.value = true;
+};
+
+const cancelDelete = () => {
+  showDeleteConfirm.value = false;
+};
+
+const confirmDelete = async () => {
+  if (!user.value || !props.book) {
+    error.value = "Utilisateur non connecté ou livre non sélectionné";
+    return;
+  }
+
+  isDeleting.value = true;
+  error.value = "";
+
+  try {
+    await deleteUserBook(props.book.userBookId);
+
+    emit("book-deleted", props.book.id);
+    closeModal();
+  } catch (err) {
+    console.error("Erreur lors de la suppression:", err);
+    error.value = "Erreur lors de la suppression du livre";
+    showDeleteConfirm.value = false;
+  } finally {
+    isDeleting.value = false;
+  }
 };
 
 // Cleanup quand le composant est démonté

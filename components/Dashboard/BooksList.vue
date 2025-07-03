@@ -1,7 +1,15 @@
 <template>
   <div class="container mx-auto px-4 py-8">
-    <!-- Ajout d'une condition pour s'assurer que selectedBook n'est pas null -->
-    <EditBookModal v-if="selectedBook" :is-open="isEditModalOpen" :book="selectedBook" @close="closeEditModal" />
+    <!-- Modal d'édition avec gestion des événements -->
+    <EditBookModal
+      v-if="selectedBook"
+      :is-open="isEditModalOpen"
+      :book="selectedBook"
+      @close="closeEditModal"
+      @book-updated="handleBookUpdated"
+      @book-deleted="handleBookDeleted"
+    />
+
     <h1 class="text-3xl font-bold mb-8">Mes Livres</h1>
 
     <div v-if="pending" class="text-center">
@@ -38,7 +46,7 @@
             <!-- Titre et auteur en haut -->
             <div class="text-center relative">
               <button
-                @click="toggleFavorite(book)"
+                @click.stop="toggleFavorite(book)"
                 class="absolute -top-2 -right-2 sm:-top-4 sm:-right-4 p-1 sm:p-2 hover:text-red-500 transition-colors"
                 :class="{ 'text-red-500': book.favorite, 'text-gray-400': !book.favorite }"
               >
@@ -80,32 +88,39 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast de notification -->
+    <div
+      v-if="showToast"
+      class="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg transition-all duration-300 z-50"
+      :class="{ 'opacity-100 translate-y-0': showToast, 'opacity-0 translate-y-2': !showToast }"
+    >
+      {{ toastMessage }}
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from "vue";
 import { getRatingStars } from "~/utils/ratingUtils";
-// ✨ 1. On importe le composable pour les livres de l'utilisateur et celui pour récupérer l'utilisateur Supabase
 import { useUserBooks } from "~/composables/useUserBooks";
 import { useSupabaseUser } from "#imports";
 import { genreToImageMap, defaultCoverImage, type Genre } from "~/utils/genreToImageMap";
 import EditBookModal from "~/components/EditBookModal.vue";
 
-// Le type pour nos livres après traitement. On l'adapte pour qu'il contienne ce dont le template a besoin.
+// Le type pour nos livres après traitement
 type DisplayBook = {
-  id: string; // ID du livre
-  userBookId: string; // ID de la relation (table user_books)
+  id: string;
+  userBookId: string;
   title: string | null;
   author: string | null;
   genre: string | null;
   favorite: boolean | null;
-  rating: number | null; // La note de l'utilisateur
-  added_at: string | null; // La date où l'utilisateur a ajouté le livre
-  review: string | null; // Avis personnel
+  rating: number | null;
+  added_at: string | null;
+  review: string | null;
 };
 
-// ✨ 2. On récupère l'utilisateur connecté et on initialise le bon composable
 const user = useSupabaseUser();
 const { fetchUserBooksWithDetails, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
 
@@ -113,21 +128,22 @@ const { fetchUserBooksWithDetails, toggleFavorite: toggleFavoriteInDb } = useUse
 const isEditModalOpen = ref(false);
 const selectedBook = ref<DisplayBook | null>(null);
 
-const openModal = async () => {
-  isEditModalOpen.value = true;
-  await nextTick();
-  // Petit délai pour permettre au DOM de se mettre à jour
-  setTimeout(() => {
-    isEditModalOpen.value = true;
-  }, 10);
-};
+// États pour les notifications
+const showToast = ref(false);
+const toastMessage = ref("");
 
-const closeModal = () => {
-  isEditModalOpen.value = false;
-  // Attendre la fin de l'animation avant de détruire le composant
+// Refs pour l'état de l'interface
+const books = ref<DisplayBook[]>([]);
+const pending = ref(true);
+const error = ref<Error | null>(null);
+
+// Fonction pour afficher une notification
+const showNotification = (message: string) => {
+  toastMessage.value = message;
+  showToast.value = true;
   setTimeout(() => {
-    isEditModalOpen.value = false;
-  }, 300);
+    showToast.value = false;
+  }, 3000);
 };
 
 // Fonction pour ouvrir la modale d'édition
@@ -142,45 +158,79 @@ const closeEditModal = () => {
   selectedBook.value = null;
 };
 
-// Refs pour l'état de l'interface
-const books = ref<DisplayBook[]>([]);
-const pending = ref(true);
-const error = ref<Error | null>(null);
+// Gestionnaire pour la mise à jour d'un livre
+const handleBookUpdated = (updatedBook: DisplayBook) => {
+  // Mise à jour optimiste - on met à jour directement dans la liste
+  const index = books.value.findIndex((book) => book.id === updatedBook.id);
+  if (index !== -1) {
+    books.value[index] = { ...books.value[index], ...updatedBook };
+  }
+  showNotification("Livre mis à jour avec succès !");
+};
 
-// ✨ 3. Au montage, on charge les livres de l'utilisateur connecté
+// Gestionnaire pour la suppression d'un livre
+const handleBookDeleted = (deletedBookId: string) => {
+  // Suppression optimiste - on retire le livre de la liste
+  books.value = books.value.filter((book) => book.id !== deletedBookId);
+  showNotification("Livre retiré de votre collection !");
+};
+
+// Fonction pour recharger les données (optionnelle, en cas d'erreur)
+const refreshBooks = async () => {
+  if (!user.value) return;
+
+  pending.value = true;
+  try {
+    const userBooksWithDetails = await fetchUserBooksWithDetails(user.value.id);
+    books.value = userBooksWithDetails
+      .map((userBook) => {
+        if (!userBook.books) return null;
+        return {
+          id: userBook.books.id,
+          userBookId: userBook.id,
+          title: userBook.books.title,
+          author: userBook.books.author,
+          genre: userBook.books.genre,
+          favorite: userBook.favorite,
+          rating: userBook.note,
+          added_at: userBook.added_at,
+          review: userBook.review,
+        };
+      })
+      .filter((book): book is DisplayBook => book !== null);
+  } catch (e) {
+    error.value = e as Error;
+  } finally {
+    pending.value = false;
+  }
+};
+
+// Chargement initial des livres
 onMounted(async () => {
-  // On s'assure qu'un utilisateur est bien connecté
   if (!user.value) {
     pending.value = false;
-    // Optionnel : vous pourriez rediriger vers la page de connexion ici
-    // ou afficher un message indiquant qu'il faut se connecter.
     console.log("Aucun utilisateur connecté.");
     return;
   }
 
   try {
-    // On appelle la fonction qui récupère les livres de l'utilisateur avec leurs détails
     const userBooksWithDetails = await fetchUserBooksWithDetails(user.value.id);
-
-    // On transforme les données pour correspondre parfaitement au template
     books.value = userBooksWithDetails
       .map((userBook) => {
-        // Si pour une raison étrange la relation existe mais que le livre a été supprimé
         if (!userBook.books) return null;
-
         return {
           id: userBook.books.id,
-          userBookId: userBook.id, // Important pour les futures mises à jour
+          userBookId: userBook.id,
           title: userBook.books.title,
           author: userBook.books.author,
           genre: userBook.books.genre,
           favorite: userBook.favorite,
-          rating: userBook.note, // On fait correspondre 'note' de la DB à 'rating' dans le template
-          added_at: userBook.added_at, // On utilise la date d'ajout par l'utilisateur
+          rating: userBook.note,
+          added_at: userBook.added_at,
           review: userBook.review,
         };
       })
-      .filter((book): book is DisplayBook => book !== null); // On retire les éventuels résultats nuls
+      .filter((book): book is DisplayBook => book !== null);
   } catch (e) {
     console.error("Erreur attrapée dans le composant:", e);
     error.value = e as Error;
@@ -189,30 +239,27 @@ onMounted(async () => {
   }
 });
 
-// ✨ 4. La fonction pour basculer le favori utilise maintenant la logique du composable
+// Fonction pour basculer le favori
 const toggleFavorite = async (book: DisplayBook) => {
   if (!user.value) {
     alert("Veuillez vous connecter pour gérer vos favoris.");
     return;
   }
 
-  // Mise à jour optimiste pour une UI réactive
   const originalFavoriteStatus = book.favorite;
   book.favorite = !book.favorite;
 
   try {
-    // Appel à la fonction du composable qui gère toute la logique
     await toggleFavoriteInDb(user.value.id, book.id);
+    showNotification(book.favorite ? "Ajouté aux favoris !" : "Retiré des favoris !");
   } catch (err) {
     console.error("Erreur lors de la mise à jour du favori:", err);
-    // En cas d'erreur, on annule le changement dans l'interface
     book.favorite = originalFavoriteStatus;
-    alert("Une erreur est survenue. Impossible de mettre à jour le favori.");
+    showNotification("Erreur lors de la mise à jour du favori");
   }
 };
 
-// ----- Fonctions utilitaires (INCHANGÉES) -----
-
+// Fonctions utilitaires (INCHANGÉES)
 const getBookCoverImage = (book: DisplayBook) => {
   if (!book.genre) {
     return defaultCoverImage;
