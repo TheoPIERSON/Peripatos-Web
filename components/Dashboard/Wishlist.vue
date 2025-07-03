@@ -1,5 +1,7 @@
 <template>
   <div class="container mx-auto px-4 py-8">
+    <!-- Ajout de la modale d'édition -->
+    <EditBookModal v-if="selectedBook" :is-open="isEditModalOpen" :book="selectedBook" @close="closeEditModal" />
     <h1 class="text-3xl font-bold mb-8">Ma Liste d'envie</h1>
 
     <div v-if="pending" class="text-center">
@@ -19,6 +21,7 @@
         v-for="book in wishlistBooks"
         :key="book.id"
         class="relative group cursor-pointer transform hover:scale-105 transition-transform duration-300 w-full max-w-sm mx-auto"
+        @click="openEditModal(book)"
       >
         <!-- Conteneur de la couverture -->
         <div
@@ -82,6 +85,7 @@ import { ref, onMounted } from "vue";
 import { useUserBooks } from "~/composables/useUserBooks";
 import { useSupabaseUser } from "#imports";
 import { genreToImageMap, defaultCoverImage, type Genre } from "~/utils/genreToImageMap";
+import EditBookModal from "~/components/EditBookModal.vue";
 
 // Le type pour nos livres, cohérent avec les autres pages
 type DisplayBook = {
@@ -99,6 +103,21 @@ type DisplayBook = {
 const user = useSupabaseUser();
 // On récupère notre nouvelle fonction fetchWishlistBooks et celle pour les favoris
 const { fetchWishlistBooks, toggleFavorite: toggleFavoriteInDb } = useUserBooks();
+
+// Refs pour la modale d'édition
+const selectedBook = ref<DisplayBook | null>(null);
+const isEditModalOpen = ref(false);
+
+// Fonctions pour gérer la modale d'édition
+const openEditModal = (book: DisplayBook) => {
+  selectedBook.value = book;
+  isEditModalOpen.value = true;
+};
+
+const closeEditModal = () => {
+  selectedBook.value = null;
+  isEditModalOpen.value = false;
+};
 
 // Les refs pour l'état de l'interface
 const wishlistBooks = ref<DisplayBook[]>([]);

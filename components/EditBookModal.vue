@@ -11,7 +11,7 @@
     >
       <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold">Modifier un livre</h2>
-        <button @click="closeModal" class="text-gray-500 hover:text-gray-700" :disabled="isLoading">
+        <button @click="closeModal" class="text-gray-500 hover:text-gray-700">
           <NuxtIcon name="fluent-color:dismiss-24" size="24" />
         </button>
       </div>
@@ -21,7 +21,7 @@
         {{ error }}
       </div>
 
-      <form @submit.prevent="handleSubmit">
+      <form>
         <div class="space-y-4">
           <!-- Informations du livre (table books) -->
           <div class="border-b pb-4 mb-4">
@@ -48,13 +48,7 @@
 
               <div>
                 <label class="block text-sm font-medium mb-1" for="favorite">
-                  <input
-                    v-model="userBookData.favorite"
-                    type="checkbox"
-                    id="favorite"
-                    class="mr-2"
-                    :disabled="isLoading"
-                  />
+                  <input v-model="userBookData.favorite" type="checkbox" id="favorite" class="mr-2" />
                   Marquer comme favori
                 </label>
               </div>
@@ -65,7 +59,6 @@
                   v-model="userBookData.note"
                   id="note"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  :disabled="isLoading"
                 >
                   <option :value="0">Liste d'envie</option>
                   <option :value="1">⭐️</option>
@@ -83,7 +76,6 @@
                   id="review"
                   rows="3"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  :disabled="isLoading"
                   :placeholder="book.review"
                 ></textarea>
               </div>
@@ -96,7 +88,6 @@
             @click="closeModal"
             type="button"
             class="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
-            :disabled="isLoading"
           >
             Retirer le livre
           </button>

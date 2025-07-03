@@ -1,6 +1,7 @@
 <template>
   <div class="container mx-auto px-4 py-8">
-    <EditBookModal :is-open="isEditModalOpen" :book="selectedBook" @close="closeEditModal" />
+    <!-- Ajout d'une condition pour s'assurer que selectedBook n'est pas null -->
+    <EditBookModal v-if="selectedBook" :is-open="isEditModalOpen" :book="selectedBook" @close="closeEditModal" />
     <h1 class="text-3xl font-bold mb-8">Mes Livres</h1>
 
     <div v-if="pending" class="text-center">
@@ -176,7 +177,7 @@ onMounted(async () => {
           favorite: userBook.favorite,
           rating: userBook.note, // On fait correspondre 'note' de la DB à 'rating' dans le template
           added_at: userBook.added_at, // On utilise la date d'ajout par l'utilisateur
-          review: userBook.review
+          review: userBook.review,
         };
       })
       .filter((book): book is DisplayBook => book !== null); // On retire les éventuels résultats nuls
