@@ -527,11 +527,6 @@ const handleSubmit = async () => {
         created_by: user.value.id,
         created_at: new Date().toISOString(),
       });
-
-      // Incrémenter le compteur pour les utilisateurs freemium
-      if (!userStats.value.isPremium) {
-        await incrementBooksCreated(user.value.id);
-      }
     }
 
     // Créer l'entrée user_books
