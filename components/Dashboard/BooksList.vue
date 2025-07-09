@@ -21,7 +21,7 @@
     </div>
 
     <div v-else-if="books && books.length === 0" class="text-center text-gray-500">
-      <p>Aucun livre trouvé.</p>
+      <p>Ajouter votre premier livre !</p>
     </div>
 
     <div v-else class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-10">

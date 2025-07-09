@@ -16,6 +16,9 @@
           />
           <div class="mt-2">
             <span class="text-sm font-medium">{{ profile?.username }}</span>
+            <div class="mt-1">
+              <span class="text-xs text-gray-600">{{ profile?.is_premium ? profile?.books_created_count : profile?.books_created_count + '/10' }} livres ajoutés</span>
+            </div>
             <div v-if="profile?.is_premium" class="mt-1">
               <span class="text-xs text-green-600">Membre premium</span>
             </div>
@@ -79,6 +82,7 @@ interface UserProfile {
   username: string | null;
   is_premium: boolean | null;
   created_at: string | null;
+  books_created_count: number | null;
 }
 
 const profile = ref<UserProfile | null>(null);
