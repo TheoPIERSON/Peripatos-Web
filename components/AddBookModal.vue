@@ -133,6 +133,7 @@
                 <option value="fantaisie">Fantaisie</option>
                 <option value="science">Science</option>
                 <option value="cuisine">Cuisine</option>
+                <option value="dark romance">Romance sombre</option>
                 <option value="autre">Autre</option>
               </select>
             </div>
@@ -506,6 +507,13 @@ const handleSubmit = async () => {
   if (!selectedExistingBook.value && !canCreateNewBook.value) {
     error.value =
       "Vous avez atteint la limite de création de livres pour votre compte gratuit. Passez au premium ou sélectionnez un livre existant.";
+    return;
+  }
+
+  // Vérifier les limites avant d'ajouter le livre
+  if (!userStats.value.isPremium && userStats.value.booksCount >= 10) {
+    error.value =
+      "Vous avez atteint la limite de 10 livres. Veuillez vous abonner à la version premium pour ajouter plus de livres.";
     return;
   }
 
