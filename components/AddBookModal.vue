@@ -26,6 +26,36 @@
         Ce livre est déjà dans votre bibliothèque !
       </div>
 
+      <!-- Limitation freemium -->
+      <div v-if="showFreemiumLimit" class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">Limite atteinte ({{ userStats.booksCount }}/10)</h3>
+            <p class="mt-1 text-sm text-yellow-700">
+              Vous avez atteint la limite de création de livres pour les comptes gratuits. Vous pouvez toujours ajouter
+              des livres existants à votre bibliothèque.
+            </p>
+            <div class="mt-3">
+              <button
+                @click="showUpgradeModal"
+                class="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-medium py-1 px-3 rounded border border-yellow-300"
+              >
+                Passer au Premium
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <form @submit.prevent="handleSubmit">
         <div class="space-y-4">
           <!-- Informations du livre (table books) -->
@@ -39,7 +69,9 @@
                 type="text"
                 id="title"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                :class="{ 'bg-gray-50': !canCreateNewBook && !selectedExistingBook }"
                 :disabled="isLoading || !!selectedExistingBook"
+                :placeholder="!canCreateNewBook && !selectedExistingBook ? 'Recherchez un livre existant...' : ''"
                 required
               />
 
@@ -71,7 +103,9 @@
                 type="text"
                 id="author"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                :class="{ 'bg-gray-50': !canCreateNewBook && !selectedExistingBook }"
                 :disabled="isLoading || !!selectedExistingBook"
+                :placeholder="!canCreateNewBook && !selectedExistingBook ? 'Recherchez un livre existant...' : ''"
                 required
               />
             </div>
@@ -82,7 +116,7 @@
                 v-model="bookData.genre"
                 id="genre"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                :disabled="isLoading"
+                :disabled="isLoading || (!canCreateNewBook && !selectedExistingBook)"
               >
                 <option value="">Sélectionnez une catégorie</option>
                 <option value="philosophie">Philosophie</option>
@@ -114,6 +148,16 @@
                 <button type="button" @click="deselectBook" class="text-blue-600 hover:text-blue-800 text-sm underline">
                   Modifier
                 </button>
+              </div>
+            </div>
+
+            <!-- Affichage du statut freemium -->
+            <div
+              v-if="!userStats.isPremium && userStats.booksCount > 0"
+              class="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md"
+            >
+              <div class="text-sm text-gray-600">
+                <span class="font-medium">Compte gratuit :</span> {{ userStats.booksCount }}/10 livres créés
               </div>
             </div>
           </div>
@@ -178,7 +222,7 @@
           <button
             type="submit"
             class="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50 flex items-center"
-            :disabled="isLoading || bookAlreadyInLibrary"
+            :disabled="isLoading || bookAlreadyInLibrary || (!canCreateNewBook && !selectedExistingBook)"
           >
             <span v-if="isLoading" class="mr-2">
               <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
@@ -199,7 +243,13 @@
               </svg>
             </span>
             {{
-              isLoading ? "Ajout en cours..." : selectedExistingBook ? "Ajouter à ma bibliothèque" : "Créer et ajouter"
+              isLoading
+                ? "Ajout en cours..."
+                : selectedExistingBook
+                ? "Ajouter à ma bibliothèque"
+                : canCreateNewBook
+                ? "Créer et ajouter"
+                : "Sélectionner un livre existant"
             }}
           </button>
         </div>
@@ -209,8 +259,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick } from "vue";
-// Type for setTimeout return value in web environment
+import { ref, watch, computed, nextTick, onMounted } from "vue";
 import { useUserProfiles } from "~/composables/useUserProfiles";
 import type { Database } from "~/types/database.types";
 
@@ -224,7 +273,7 @@ interface UseBooksReturn {
   findExactMatch: (title: string, author: string) => Promise<Database["public"]["Tables"]["books"]["Row"] | null>;
 }
 
-const emit = defineEmits(["close", "book-added"]);
+const emit = defineEmits(["close", "book-added", "show-upgrade-modal"]);
 
 const props = defineProps({
   isOpen: {
@@ -240,6 +289,7 @@ const props = defineProps({
 // Composables
 const { addBook, searchBooks, checkUserHasBook, findExactMatch } = useBooks() as UseBooksReturn;
 const { addUserBook } = useUserBooks();
+const { getUserProfile, canCreateBook, incrementBooksCreated } = useUserProfiles();
 const user = useSupabaseUser();
 
 // État
@@ -247,6 +297,13 @@ const isLoading = ref(false);
 const error = ref("");
 const suggestions = ref<Book[]>([]);
 const showSuggestions = ref(false);
+
+// Nouveau : état pour la gestion freemium
+const userStats = ref({
+  isPremium: false,
+  booksCount: 0,
+  canCreate: true,
+});
 
 interface Book {
   id: string;
@@ -262,6 +319,16 @@ const userHasBook = ref<Record<string, boolean>>({});
 
 // Computed pour vérifier si un livre est sélectionné
 const hasSelectedBook = computed(() => selectedExistingBook.value !== null);
+
+// Computed pour savoir si l'utilisateur peut créer un nouveau livre
+const canCreateNewBook = computed(() => {
+  return userStats.value.isPremium || userStats.value.canCreate;
+});
+
+// Computed pour afficher la limitation freemium
+const showFreemiumLimit = computed(() => {
+  return !userStats.value.isPremium && !userStats.value.canCreate && !selectedExistingBook.value;
+});
 
 // Données du livre (table books)
 const bookData = ref({
@@ -281,6 +348,23 @@ const userBookData = ref({
 const bookAlreadyInLibrary = computed(() => {
   return selectedExistingBook.value ? userHasBook.value[selectedExistingBook.value.id] : false;
 });
+
+// Fonction pour charger les stats utilisateur
+const loadUserStats = async () => {
+  if (!user.value) return;
+
+  try {
+    const stats = await canCreateBook(user.value.id);
+    userStats.value = stats;
+  } catch (err) {
+    console.error("Erreur lors du chargement des stats utilisateur:", err);
+  }
+};
+
+// Fonction pour montrer la modale d'upgrade
+const showUpgradeModal = () => {
+  emit("show-upgrade-modal");
+};
 
 // Fonction debounce pour éviter trop d'appels API
 const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
@@ -307,7 +391,6 @@ const debouncedSearch = debounce(async (query) => {
     const results = await searchBooks(query);
     suggestions.value = results;
 
-    // Store user value in a local variable to ensure it's not null
     const currentUser = user.value;
     if (!currentUser) return;
 
@@ -326,7 +409,6 @@ const debouncedSearch = debounce(async (query) => {
     });
 
     userHasBook.value = newUserHasBook;
-
     showSuggestions.value = results.length > 0;
   } catch (err) {
     console.error("Erreur lors de la recherche:", err);
@@ -343,13 +425,14 @@ watch([() => bookData.value.title, () => bookData.value.author], ([title, author
   }
 });
 
-// Watch pour gérer le scroll du body
+// Watch pour gérer le scroll du body et charger les stats
 watch(
   () => props.isOpen,
-  (newValue) => {
+  async (newValue) => {
     if (newValue) {
       document.body.style.overflow = "hidden";
       resetForm();
+      await loadUserStats();
     } else {
       document.body.style.overflow = "";
     }
@@ -419,6 +502,13 @@ const handleSubmit = async () => {
     return;
   }
 
+  // Vérifier les limites freemium avant de créer un nouveau livre
+  if (!selectedExistingBook.value && !canCreateNewBook.value) {
+    error.value =
+      "Vous avez atteint la limite de création de livres pour votre compte gratuit. Passez au premium ou sélectionnez un livre existant.";
+    return;
+  }
+
   isLoading.value = true;
   error.value = "";
 
@@ -437,6 +527,11 @@ const handleSubmit = async () => {
         created_by: user.value.id,
         created_at: new Date().toISOString(),
       });
+
+      // Incrémenter le compteur pour les utilisateurs freemium
+      if (!userStats.value.isPremium) {
+        await incrementBooksCreated(user.value.id);
+      }
     }
 
     // Créer l'entrée user_books
