@@ -1,232 +1,254 @@
-export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
 
 export type Database = {
   // Allows to automatically instanciate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)";
-  };
+    PostgrestVersion: "12.2.3 (519615d)"
+  }
   public: {
     Tables: {
       books: {
         Row: {
-          author: string | null;
-          created_at: string | null;
-          created_by: string | null;
-          genre: string | null;
-          id: string;
-          title: string | null;
-        };
+          author: string | null
+          created_at: string | null
+          created_by: string | null
+          genre: string | null
+          id: string
+          title: string | null
+        }
         Insert: {
-          author?: string | null;
-          created_at?: string | null;
-          created_by?: string | null;
-          genre?: string | null;
-          id?: string;
-          title?: string | null;
-        };
+          author?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          genre?: string | null
+          id?: string
+          title?: string | null
+        }
         Update: {
-          author?: string | null;
-          created_at?: string | null;
-          created_by?: string | null;
-          genre?: string | null;
-          id?: string;
-          title?: string | null;
-        };
-        Relationships: [];
-      };
+          author?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          genre?: string | null
+          id?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
-          books_created_count: number | null;
-          created_at: string | null;
-          id: string;
-          is_premium: boolean | null;
-          username: string | null;
-        };
+          books_created_count: number | null
+          created_at: string | null
+          id: string
+          subscription_type: string | null
+          username: string | null
+        }
         Insert: {
-          books_created_count?: number | null;
-          created_at?: string | null;
-          id: string;
-          is_premium?: boolean | null;
-          username?: string | null;
-        };
+          books_created_count?: number | null
+          created_at?: string | null
+          id: string
+          subscription_type?: string | null
+          username?: string | null
+        }
         Update: {
-          books_created_count?: number | null;
-          created_at?: string | null;
-          id?: string;
-          is_premium?: boolean | null;
-          username?: string | null;
-        };
-        Relationships: [];
-      };
+          books_created_count?: number | null
+          created_at?: string | null
+          id?: string
+          subscription_type?: string | null
+          username?: string | null
+        }
+        Relationships: []
+      }
       user_books: {
         Row: {
-          added_at: string | null;
-          book_id: string | null;
-          favorite: boolean | null;
-          id: string;
-          note: number | null;
-          review: string | null;
-          user_id: string | null;
-        };
+          added_at: string | null
+          book_id: string | null
+          favorite: boolean | null
+          id: string
+          note: number | null
+          review: string | null
+          user_id: string | null
+        }
         Insert: {
-          added_at?: string | null;
-          book_id?: string | null;
-          favorite?: boolean | null;
-          id?: string;
-          note?: number | null;
-          review?: string | null;
-          user_id?: string | null;
-        };
+          added_at?: string | null
+          book_id?: string | null
+          favorite?: boolean | null
+          id?: string
+          note?: number | null
+          review?: string | null
+          user_id?: string | null
+        }
         Update: {
-          added_at?: string | null;
-          book_id?: string | null;
-          favorite?: boolean | null;
-          id?: string;
-          note?: number | null;
-          review?: string | null;
-          user_id?: string | null;
-        };
+          added_at?: string | null
+          book_id?: string | null
+          favorite?: boolean | null
+          id?: string
+          note?: number | null
+          review?: string | null
+          user_id?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "user_books_book_id_fkey";
-            columns: ["book_id"];
-            isOneToOne: false;
-            referencedRelation: "books";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-    };
+            foreignKeyName: "user_books_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
+      add_book_and_associate: {
+        Args: { book_data: Json; user_id: string }
+        Returns: Json
+      }
+      create_book_and_increment: {
+        Args: { p_book_data: Json; p_user_id: string }
+        Returns: string
+      }
       increment_books_created: {
-        Args: { user_id: string };
-        Returns: undefined;
-      };
-    };
+        Args: { user_id: string }
+        Returns: undefined
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">];
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] & DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R;
-    }
-    ? R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never;
 
 export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+      Insert: infer I
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Insert: infer I;
-    }
-    ? I
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never;
 
 export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+      Update: infer U
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Update: infer U;
-    }
-    ? U
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never;
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"] | { schema: keyof DatabaseWithoutInternals },
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never;
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
+    schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
+  schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never;
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const;
+} as const

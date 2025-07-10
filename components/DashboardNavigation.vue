@@ -12,15 +12,39 @@
             src="/images/aristote.png"
             alt="Avatar"
             class="h-16 w-16 rounded-full object-cover cursor-pointer relative border-3 mt-4"
-            :class="profile?.is_premium ? 'border-green-500' : 'border-yellow-500'"
+            :class="{
+              'border-green-500': profile?.subscription_type === 'premium',
+              'border-blue-500': profile?.subscription_type === 'pro',
+              'border-yellow-500': profile?.subscription_type === 'freemium',
+            }"
           />
           <div class="mt-2">
             <span class="text-sm font-medium">{{ profile?.username }}</span>
             <div class="mt-1">
-              <span class="text-xs text-gray-600">{{ profile?.is_premium ? profile?.books_created_count : profile?.books_created_count + '/10' }} livres ajoutés</span>
+              <span class="text-xs text-gray-600">
+                {{ profile?.books_created_count }}/{{ profile?.monthly_limit }} ce mois-ci
+              </span>
             </div>
-            <div v-if="profile?.is_premium" class="mt-1">
-              <span class="text-xs text-green-600">Membre premium</span>
+            <div class="mt-1">
+              <span class="text-xs text-gray-600"> {{ profile?.books_created_count }} livres ajoutés </span>
+            </div>
+            <div v-if="profile?.subscription_type" class="mt-1">
+              <span
+                class="text-xs"
+                :class="{
+                  'text-green-600': profile?.subscription_type === 'premium',
+                  'text-blue-600': profile?.subscription_type === 'pro',
+                  'text-gray-600': profile?.subscription_type === 'freemium',
+                }"
+              >
+                {{
+                  profile?.subscription_type === "premium"
+                    ? "Membre premium"
+                    : profile?.subscription_type === "pro"
+                    ? "Membre pro"
+                    : "Membre freemium"
+                }}
+              </span>
             </div>
           </div>
         </div>
@@ -80,9 +104,10 @@ const { user, getProfile } = useAuth();
 interface UserProfile {
   id: string;
   username: string | null;
-  is_premium: boolean | null;
+  subscription_type: "premium" | "pro" | "freemium" | null;
   created_at: string | null;
   books_created_count: number | null;
+  monthly_limit: number | null;
 }
 
 const profile = ref<UserProfile | null>(null);
@@ -97,7 +122,32 @@ watch(
         console.error("Erreur lors de la récupération du profil:", error);
         return;
       }
-      profile.value = data;
+
+      // Par défaut, on considère que le type d'abonnement est 'freemium'
+      const subscriptionType = data?.subscription_type || "freemium";
+
+      // Assurer que le type d'abonnement est valide
+      const validSubscriptionTypes = ["premium", "pro", "freemium"] as const;
+      const validType = validSubscriptionTypes.includes(subscriptionType as (typeof validSubscriptionTypes)[number])
+        ? subscriptionType
+        : "freemium";
+
+      // Calculer la limite mensuelle en fonction du type d'abonnement
+      const monthlyLimit =
+        {
+          premium: 30,
+          pro: 100,
+          freemium: 10,
+        }[validType] || 10;
+
+      profile.value = {
+        id: data?.id || "",
+        username: data?.username || null,
+        subscription_type: validType as "premium" | "pro" | "freemium",
+        created_at: data?.created_at || null,
+        books_created_count: data?.books_created_count || 0,
+        monthly_limit: monthlyLimit,
+      } as UserProfile;
     } else {
       profile.value = null;
     }

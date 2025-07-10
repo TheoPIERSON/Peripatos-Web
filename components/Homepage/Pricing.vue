@@ -168,20 +168,24 @@
             </li>
           </ul>
 
-          <NuxtLink
-            to="/premium-subscribe"
+          <a
+            href="https://buy.stripe.com/test_fZu3cucMJeRo2OK8YIcfK00"
             class="mt-auto block text-center bg-primary text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
           >
             Passer au Premium
-          </NuxtLink>
+          </a>
         </div>
       </div>
     </div>
   </section>
 </template>
 
-<script lang="ts" setup></script>
-
+<script setup lang="ts">
+const checkout = async () => {
+  const { useCheckout } = await import("~/composables/useCheckout");
+  await useCheckout();
+};
+</script>
 <style scoped>
 /* Pas de styles spécifiques nécessaires si Tailwind suffit */
 </style>

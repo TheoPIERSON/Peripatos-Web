@@ -28,7 +28,7 @@ export const useUserProfiles = () => {
   // Vérifier si l'utilisateur peut créer un nouveau livre
   const canCreateBook = async (
     userId: string
-  ): Promise<{ canCreate: boolean; booksCount: number; isPremium: boolean }> => {
+  ): Promise<{ canCreate: boolean; booksCount: number; subscriptionType: string; monthlyLimit: number }> => {
     try {
       const profile = await getUserProfile(userId);
 
@@ -37,16 +37,22 @@ export const useUserProfiles = () => {
       }
 
       const booksCount = profile.books_created_count || 0;
-      const isPremium = profile.is_premium || false;
+      const subscriptionType = profile.subscription_type || "freemium";
+      const monthlyLimit = {
+        'freemium': 10,
+        'premium': 30,
+        'pro': 100
+      }[subscriptionType] || 10; // Par défaut 10 pour freemium
 
-      // Les utilisateurs premium peuvent créer autant de livres qu'ils veulent
-      if (isPremium) {
-        return { canCreate: true, booksCount, isPremium };
-      }
+      // Vérifier si le nombre de livres créés est inférieur à la limite mensuelle
+      const canCreate = booksCount < monthlyLimit;
 
-      // Les utilisateurs freemium sont limités à 10 livres
-      const canCreate = booksCount < 10;
-      return { canCreate, booksCount, isPremium };
+      return {
+        canCreate,
+        booksCount,
+        subscriptionType,
+        monthlyLimit
+      };
     } catch (error) {
       console.error("Erreur lors de la vérification des limites:", error);
       throw error;
