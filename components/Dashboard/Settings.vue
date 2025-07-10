@@ -33,6 +33,7 @@
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-gray-600">Abonnement</span>
+
                 <span
                   class="font-medium px-3 py-1.5 rounded-full text-sm"
                   :class="{
@@ -54,6 +55,9 @@
                 <span class="text-gray-600">Total des livres ajoutés</span>
                 <span class="font-medium text-gray-800">{{ profile?.books_created_count || 0 }} livres</span>
               </div>
+              <NuxtLink to="/subscription" class="mt-2 text-sm text-primary hover:text-primary-dark font-medium">
+                Passer à un abonnement supérieur
+              </NuxtLink>
             </div>
           </div>
 
