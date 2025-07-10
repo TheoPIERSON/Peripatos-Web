@@ -8,10 +8,13 @@ export default defineEventHandler(async (event) => {
     payment_method_types: ["card"],
     line_items: [
       {
-        price: "price_xxx", // Ton ID de prix Stripe
+        price: "price_1RjHW7D8iENUB5LaN3GSiy8B", // ton prix
         quantity: 1,
       },
     ],
+    metadata: {
+      user_id: body.user_id, // Assure-toi d’envoyer le user_id depuis le frontend
+    },
     success_url: "https://peripatos.app/success",
     cancel_url: "https://peripatos.app/cancel",
   });

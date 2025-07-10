@@ -17,6 +17,7 @@
     "@stripe/stripe-js": "^7.4.0",
     "@supabase/supabase-js": "^2.49.9",
     "@unlok-co/nuxt-stripe": "5.0.0",
+    "micro": "^10.0.1",
     "nuxt": "^3.17.4",
     "vue": "^3.5.15",
     "vue-router": "^4.5.1"
