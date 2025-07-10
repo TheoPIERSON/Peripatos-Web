@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-05-15",
   devtools: { enabled: true },
-  modules: ["@nuxtjs/tailwindcss", "@nuxtjs/google-fonts", "@nuxtjs/supabase", "@nuxt/icon"],
+  modules: ["@nuxtjs/tailwindcss", "@nuxtjs/google-fonts", "@nuxtjs/supabase", "@nuxt/icon", "@unlok-co/nuxt-stripe"],
   css: ["~/assets/css/tailwind.css"],
 
   // Configuration des variables d'environnement
@@ -10,7 +10,9 @@ export default defineNuxtConfig({
     public: {
       SUPABASE_URL: process.env.SUPABASE_URL,
       SUPABASE_KEY: process.env.SUPABASE_KEY,
+      stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     },
+    stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   },
 
   // Configuration SSR pour éviter les problèmes d'hydratation
