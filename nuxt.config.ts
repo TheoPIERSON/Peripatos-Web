@@ -17,6 +17,9 @@ export default defineNuxtConfig({
 
   // Configuration SSR pour éviter les problèmes d'hydratation
   ssr: true,
+  alias: {
+    '~': '/Users/theopierson/Sites/lab/peripatos-w0.1/peripatos-front',
+  },
 
   // Configuration Supabase consolidée ici
   supabase: {
