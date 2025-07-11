@@ -45,12 +45,12 @@
               des livres existants à votre bibliothèque.
             </p>
             <div class="mt-3">
-              <button
-                @click="showUpgradeModal"
+              <NuxtLink
+                to="/subscription"
                 class="text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-medium py-1 px-3 rounded border border-yellow-300"
               >
                 Passer au Premium
-              </button>
+              </NuxtLink>
             </div>
           </div>
         </div>
@@ -356,7 +356,11 @@ const loadUserStats = async () => {
 
   try {
     const stats = await canCreateBook(user.value.id);
-    userStats.value = stats;
+    userStats.value = {
+      isPremium: stats.subscriptionType !== "freemium",
+      booksCount: stats.booksCount,
+      canCreate: stats.canCreate,
+    };
   } catch (err) {
     console.error("Erreur lors du chargement des stats utilisateur:", err);
   }

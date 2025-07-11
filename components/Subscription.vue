@@ -392,20 +392,7 @@ const getRecommendedPlan = () => {
 };
 
 const changePlan = async (newPlan: "freemium" | "pro" | "premium") => {
-  // Ici vous pouvez implémenter la logique de changement d'abonnement
-  // Par exemple, rediriger vers Stripe ou un autre système de paiement
   console.log(`Changement vers le plan ${newPlan}`);
-
-  // Exemple d'implémentation :
-  // if (newPlan !== 'freemium') {
-  //   // Rediriger vers la page de paiement
-  //   await navigateTo(`/checkout?plan=${newPlan}`);
-  // } else {
-  //   // Confirmation de rétrogradation
-  //   if (confirm('Êtes-vous sûr de vouloir rétrograder vers le plan Freemium ?')) {
-  //     // Logique de rétrogradation
-  //   }
-  // }
 };
 </script>
 
