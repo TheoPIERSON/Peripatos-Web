@@ -507,17 +507,10 @@ const handleSubmit = async () => {
     return;
   }
 
-  // Vérifier les limites freemium avant de créer un nouveau livre
-  if (!selectedExistingBook.value && !canCreateNewBook.value) {
+  // Si aucun livre existant n'est sélectionné ET que l'utilisateur est freemium et a atteint sa limite
+  if (!selectedExistingBook.value && !userStats.value.isPremium && userStats.value.booksCount >= 10) {
     error.value =
-      "Vous avez atteint la limite de création de livres pour votre compte gratuit. Passez au premium ou sélectionnez un livre existant.";
-    return;
-  }
-
-  // Vérifier les limites avant d'ajouter le livre
-  if (!userStats.value.isPremium && userStats.value.booksCount >= 10) {
-    error.value =
-      "Vous avez atteint la limite de 10 livres. Veuillez vous abonner à la version premium pour ajouter plus de livres.";
+      "Vous avez atteint la limite de création de livres pour votre compte gratuit. Veuillez vous abonner à la version premium pour créer plus de livres ou sélectionnez un livre existant.";
     return;
   }
 

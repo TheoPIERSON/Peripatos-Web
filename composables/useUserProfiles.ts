@@ -38,11 +38,12 @@ export const useUserProfiles = () => {
 
       const booksCount = profile.books_created_count || 0;
       const subscriptionType = profile.subscription_type || "freemium";
-      const monthlyLimit = {
-        'freemium': 10,
-        'premium': 30,
-        'pro': 100
-      }[subscriptionType] || 10; // Par défaut 10 pour freemium
+      const monthlyLimit =
+        {
+          freemium: 10,
+          premium: 30,
+          pro: 100,
+        }[subscriptionType] || 10; // Par défaut 10 pour freemium
 
       // Vérifier si le nombre de livres créés est inférieur à la limite mensuelle
       const canCreate = booksCount < monthlyLimit;
@@ -51,7 +52,7 @@ export const useUserProfiles = () => {
         canCreate,
         booksCount,
         subscriptionType,
-        monthlyLimit
+        monthlyLimit,
       };
     } catch (error) {
       console.error("Erreur lors de la vérification des limites:", error);
@@ -77,40 +78,9 @@ export const useUserProfiles = () => {
     }
   };
 
-  // Alternative: Incrémenter le compteur de livres créés (méthode manuelle)
-  const incrementBooksCreatedManual = async (userId: string): Promise<void> => {
-    try {
-      // Récupérer le profil actuel
-      const profile = await getUserProfile(userId);
-
-      if (!profile) {
-        throw new Error("Profil utilisateur introuvable");
-      }
-
-      // Incrémenter et mettre à jour
-      const newCount = (profile.books_created_count || 0) + 1;
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({
-          books_created_count: newCount,
-        })
-        .eq("id", userId);
-
-      if (error) {
-        console.error("Erreur lors de l'incrémentation du compteur:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Erreur lors de l'incrémentation du compteur:", error);
-      throw error;
-    }
-  };
-
   return {
     getUserProfile,
     canCreateBook,
     incrementBooksCreated,
-    incrementBooksCreatedManual, // Alternative si vous ne voulez pas utiliser rpc
   };
 };
