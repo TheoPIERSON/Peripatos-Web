@@ -18,16 +18,19 @@
             <span class="text-sm font-medium">{{ profile?.username }}</span>
             <div class="mt-1">
               <span class="text-xs text-gray-600">
-                {{ profile?.books_created_count }}/{{ profile?.monthly_limit }} ce mois-ci
+                {{ profile?.books_created_count }}/{{ profile?.monthly_limit }} livres ajoutés
               </span>
             </div>
-            <div class="mt-1">
+            <div v-if="profile?.subscription_type !== 'freemium'" class="mt-1">
               <span class="text-xs text-gray-600"> {{ profile?.books_created_count }} livres ajoutés </span>
             </div>
             <div v-if="profile?.subscription_type" class="mt-1">
-              <span class="text-xs" :class="subscriptionColor">
-                {{ subscriptionLabel }}
-              </span>
+              <NuxtLink
+                to="/subscription"
+                class="inline-flex items-center px-3 py-1 text-sm text-white bg-yellow rounded-full font-medium hover:bg-yellow-dark hover:text-white transition-colors"
+              >
+                {{ subscriptionLabel === "Membre freemium" ? "Passer au premium" : subscriptionLabel }}
+              </NuxtLink>
             </div>
           </div>
         </div>
