@@ -4,14 +4,13 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "~/types/database.types";
 import type Stripe from "stripe";
 
-const supabase = createClient<Database>(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_KEY! // Nécessite une clé avec droits d'écriture
-);
+// Initialise Supabase client avec une clé ayant les droits d'écriture
+const supabase = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
 
+// Stripe exige le body brut (important pour la vérification de signature)
 export const config = {
   api: {
-    bodyParser: false, // Stripe exige le body brut
+    bodyParser: false,
   },
 };
 
@@ -19,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const sig = event.headers.get("stripe-signature")!;
   const rawBody = await readRawBody(event);
 
-  let stripeEvent;
+  let stripeEvent: Stripe.Event;
 
   try {
     stripeEvent = stripe.webhooks.constructEvent(rawBody as string, sig, process.env.STRIPE_WEBHOOK_SECRET!);
@@ -33,16 +32,20 @@ export default defineEventHandler(async (event) => {
     const session = stripeEvent.data.object as Stripe.Checkout.Session;
 
     const userId = session.metadata?.user_id;
+    const newPlan = session.metadata?.subscription_type;
 
-    if (userId) {
-      // 🟢 Met à jour l'utilisateur en "premium"
-      const { error } = await supabase.from("profiles").update({ subscription_type: "premium" }).eq("id", userId);
+    if (!userId || !newPlan) {
+      console.error("❌ Données manquantes dans les metadata Stripe.");
+      return { statusCode: 400, body: "Missing user_id or subscription_type" };
+    }
 
-      if (error) {
-        console.error("❌ Failed to update subscription type:", error);
-      } else {
-        console.log(`✅ User ${userId} upgraded to premium`);
-      }
+    // 🔄 Met à jour l'abonnement utilisateur dans Supabase
+    const { error } = await supabase.from("profiles").update({ subscription_type: newPlan }).eq("id", userId);
+
+    if (error) {
+      console.error("❌ Failed to update subscription type:", error);
+    } else {
+      console.log(`✅ User ${userId} upgraded to ${newPlan}`);
     }
   }
 
