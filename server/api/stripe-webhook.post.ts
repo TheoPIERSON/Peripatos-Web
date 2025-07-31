@@ -4,10 +4,12 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "~/types/database.types";
 import type Stripe from "stripe";
 
-// Initialise Supabase client avec une clé ayant les droits d'écriture
-const supabase = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
+const supabase = createClient<Database>(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_KEY! // doit avoir les droits d'écriture
+);
 
-// Stripe exige le body brut (important pour la vérification de signature)
+// Stripe exige le body brut
 export const config = {
   api: {
     bodyParser: false,
@@ -15,8 +17,13 @@ export const config = {
 };
 
 export default defineEventHandler(async (event) => {
-  const sig = event.headers.get("stripe-signature")!;
+  const sig = event.headers.get("stripe-signature");
   const rawBody = await readRawBody(event);
+
+  if (!sig || !rawBody) {
+    console.error("❌ Signature ou body manquant");
+    return { statusCode: 400, body: "Invalid request" };
+  }
 
   let stripeEvent: Stripe.Event;
 
@@ -32,20 +39,21 @@ export default defineEventHandler(async (event) => {
     const session = stripeEvent.data.object as Stripe.Checkout.Session;
 
     const userId = session.metadata?.user_id;
-    const newPlan = session.metadata?.subscription_type;
+    const newSubscriptionType = session.metadata?.subscription_type || "premium";
 
-    if (!userId || !newPlan) {
-      console.error("❌ Données manquantes dans les metadata Stripe.");
-      return { statusCode: 400, body: "Missing user_id or subscription_type" };
-    }
+    if (userId) {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ subscription_type: newSubscriptionType })
+        .eq("id", userId);
 
-    // 🔄 Met à jour l'abonnement utilisateur dans Supabase
-    const { error } = await supabase.from("profiles").update({ subscription_type: newPlan }).eq("id", userId);
-
-    if (error) {
-      console.error("❌ Failed to update subscription type:", error);
+      if (error) {
+        console.error("❌ Failed to update subscription type:", error);
+      } else {
+        console.log(`✅ User ${userId} upgraded to ${newSubscriptionType}`);
+      }
     } else {
-      console.log(`✅ User ${userId} upgraded to ${newPlan}`);
+      console.warn("⚠️ user_id absent dans les metadata Stripe");
     }
   }
 
